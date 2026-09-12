@@ -5,7 +5,7 @@ import { initialCategoryCarouselSettings } from '../data/initialData';
 import { Category } from '../types';
 
 export const CategoryBar: React.FC = () => {
-  const { categories, selectedCategory, setSelectedCategory, products, storeSettings } = useStore();
+  const { categories, selectedCategory, setSelectedCategory, products, storeSettings, isInitialLoading } = useStore();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isManualPaused, setIsManualPaused] = useState(false);
@@ -15,6 +15,21 @@ export const CategoryBar: React.FC = () => {
   const getProductCount = (catId: string) => {
     return products.filter((p) => p.category_id === catId && p.is_active).length;
   };
+
+  if (isInitialLoading) {
+    return (
+      <div className="py-6 px-4 sm:px-8 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 overflow-hidden">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-12 w-28 sm:w-36 rounded-full bg-[#F4EDE3] border border-[#E7D9CA]/60 shrink-0 animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // Filter active categories and sort by sort_order
   const activeCategories = categories

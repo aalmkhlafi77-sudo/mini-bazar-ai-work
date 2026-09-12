@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "vitest run tests/security-rules.test.ts tests/image-upload-service.test.ts tests/admin-claim.test.ts",
+    "test": "vitest run tests/security-rules.test.ts tests/image-upload-service.test.ts tests/admin-claim.test.ts tests/firestore-initial-sync.test.ts",
     "test:rules": "vitest run tests/security-rules.test.ts",
     "test:integration": "vitest run tests/rules-integration.test.ts",
     "test:emulator": "firebase emulators:exec --only firestore,storage \"vitest run tests/rules-integration.test.ts\""

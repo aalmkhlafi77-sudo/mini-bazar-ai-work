@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
-import { Sparkles, SlidersHorizontal, PackageSearch, Award, X } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, PackageSearch, Award, X, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const ProductGrid: React.FC = () => {
   const {
@@ -15,6 +15,8 @@ export const ProductGrid: React.FC = () => {
     searchQuery,
     setSearchQuery,
     storeSettings,
+    isInitialLoading,
+    initialSyncError,
   } = useStore();
 
   const [filterType, setFilterType] = useState<'all' | 'best_seller' | 'new'>('all');
@@ -78,8 +80,85 @@ export const ProductGrid: React.FC = () => {
     return true;
   });
 
+  if (isInitialLoading) {
+    return (
+      <section id="products-section" className="py-12 px-4 sm:px-8 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div className="space-y-2">
+            <div className="w-24 h-4 bg-[#EFE6DA] rounded-full animate-pulse" />
+            <div className="w-56 h-8 bg-[#E7D9CA] rounded-xl animate-pulse" />
+          </div>
+          <div className="w-48 h-10 bg-[#EFE6DA] rounded-xl animate-pulse" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div
+              key={i}
+              className="rounded-[20px] bg-white border border-[#E5D8C9] p-4 space-y-4 animate-pulse"
+            >
+              <div className="w-full aspect-square bg-[#F4EDE3] rounded-[16px]" />
+              <div className="space-y-2 pt-2">
+                <div className="w-3/4 h-5 bg-[#EFE6DA] rounded-md" />
+                <div className="w-1/2 h-4 bg-[#F4EDE3] rounded-md" />
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <div className="w-20 h-6 bg-[#E7D9CA] rounded-md" />
+                <div className="w-10 h-10 bg-[#F4EDE3] rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Display clear Arabic error state if initial Firestore sync failed and no products are present
+  if (initialSyncError && products.length === 0) {
+    return (
+      <section id="products-section" className="py-16 px-4 sm:px-8 max-w-xl mx-auto text-center" dir="rtl">
+        <div className="bg-[#FAF5EE] border border-[#E7D4BC] rounded-[24px] p-8 sm:p-10 space-y-4 shadow-xs">
+          <div className="w-14 h-14 rounded-full bg-[#FCE8E6] text-[#D93025] flex items-center justify-center mx-auto mb-2">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold text-[#2F2B28] font-heading">
+            تعذر الاتصال بقاعدة البيانات
+          </h3>
+          <p className="text-xs sm:text-sm text-[#7C736D] leading-relaxed max-w-md mx-auto">
+            {initialSyncError}
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[14px] bg-[#2F2B28] hover:bg-[#231F1D] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>إعادة المحاولة</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="products-section" className="py-12 px-4 sm:px-8 max-w-7xl mx-auto">
+      {/* Arabic Error banner if sync error occurred but some items exist */}
+      {initialSyncError && (
+        <div className="mb-6 p-4 rounded-[16px] bg-[#FCE8E6]/70 border border-[#F5C2BE] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm text-[#B3261E]" dir="rtl">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <p>{initialSyncError}</p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-1.5 bg-white border border-[#F5C2BE] rounded-lg text-xs font-medium hover:bg-[#FFF8F7] transition-colors shrink-0 cursor-pointer"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
       {/* Header and Filter Controls */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div className="text-right">
@@ -265,8 +344,21 @@ export const ProductGrid: React.FC = () => {
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
+      ) : products.length === 0 ? (
+        /* Empty Database State: When store has no products yet */
+        <div className="text-center py-20 px-4 bg-[#F7F1E8]/50 rounded-[28px] border border-[#E7D4BC] my-8 max-w-2xl mx-auto">
+          <div className="w-16 h-16 rounded-full bg-[#F4ECE2] text-[#C6A36A] flex items-center justify-center mx-auto mb-4">
+            <PackageSearch className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-[#2F2B28] mb-2 font-heading">
+            لا توجد منتجات معروضة حالياً
+          </h3>
+          <p className="text-xs sm:text-sm text-[#7C736D] max-w-md mx-auto leading-relaxed">
+            قائمة المنتجات فارغة حالياً. عند إضافة منتجات في المتجر ستظهر هنا مباشرة.
+          </p>
+        </div>
       ) : (
-        /* Empty State */
+        /* Empty Filter State: When search/category filter yields no match */
         <div className="text-center py-16 px-4 bg-[#F7F1E8]/50 rounded-[28px] border border-[#E7D4BC] my-8">
           <div className="w-16 h-16 rounded-full bg-[#F4ECE2] text-[#C6A36A] flex items-center justify-center mx-auto mb-4">
             <PackageSearch className="w-8 h-8" />

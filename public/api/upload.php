@@ -247,26 +247,31 @@ function verifyFirebaseAdminToken(string $idToken, string $expectedProjectId): a
     ];
 }
 
-// 4. Enforce Authentication & Admin Role
-$authHeader = getAuthorizationHeader();
-if (!$authHeader || !preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
-    http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'error' => 'غير مصرح: يرجى تسجيل الدخول أولاً كمسؤول لرفع الصور.'
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
+// 4. Enforce Authentication & Admin Role (exempting customer bank transfer receipts)
+$requestedFolder = isset($_POST['folder']) ? trim((string)$_POST['folder']) : 'general';
+$isReceiptUpload = ($requestedFolder === 'receipts');
 
-$idToken = $matches[1];
-$authResult = verifyFirebaseAdminToken($idToken, $firebaseProjectId);
-if (!$authResult['valid']) {
-    http_response_code($authResult['code'] ?? 401);
-    echo json_encode([
-        'success' => false,
-        'error' => $authResult['error'] ?? 'فشل التحقق من هوية وصلاحيات المشرف.'
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
+if (!$isReceiptUpload) {
+    $authHeader = getAuthorizationHeader();
+    if (!$authHeader || !preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'غير مصرح: يرجى تسجيل الدخول أولاً كمسؤول لرفع الصور.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $idToken = $matches[1];
+    $authResult = verifyFirebaseAdminToken($idToken, $firebaseProjectId);
+    if (!$authResult['valid']) {
+        http_response_code($authResult['code'] ?? 401);
+        echo json_encode([
+            'success' => false,
+            'error' => $authResult['error'] ?? 'فشل التحقق من هوية وصلاحيات المشرف.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 // 5. Check for uploaded file in $_FILES

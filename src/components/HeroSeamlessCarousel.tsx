@@ -6,7 +6,7 @@ import { HeroSlide } from '../types';
 import { HeroParticles } from './HeroParticles';
 
 export const HeroSeamlessCarousel: React.FC = () => {
-  const { heroSlides, themeSettings, setActiveView } = useStore();
+  const { heroSlides, themeSettings, setActiveView, isInitialLoading } = useStore();
   const visibleSlides = heroSlides.filter((s) => s.is_visible);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -62,6 +62,24 @@ export const HeroSeamlessCarousel: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nextSlide, prevSlide]);
+
+  if (isInitialLoading) {
+    return (
+      <section className="relative w-full max-w-7xl mx-auto px-4 sm:px-8 pt-4 pb-8">
+        <div className="w-full min-h-[340px] sm:min-h-[420px] md:min-h-[480px] rounded-[24px] sm:rounded-[32px] bg-[#F5EFE6] border border-[#E7D4BC]/60 overflow-hidden relative animate-pulse flex flex-col justify-end p-6 sm:p-12">
+          <div className="space-y-4 max-w-xl">
+            <div className="w-32 h-4 bg-[#E7D9CA] rounded-full" />
+            <div className="w-3/4 h-8 sm:h-10 bg-[#E7D9CA] rounded-xl" />
+            <div className="w-1/2 h-4 sm:h-5 bg-[#E7D9CA] rounded-lg" />
+            <div className="pt-2 flex gap-3">
+              <div className="w-28 h-10 bg-[#DECDBD] rounded-xl" />
+              <div className="w-24 h-10 bg-[#E7D9CA] rounded-xl" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (totalSlides === 0) return null;
 

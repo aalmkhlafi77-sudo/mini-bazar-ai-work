@@ -1835,7 +1835,7 @@ ${order.discount_total ? `الخصم المطبق: -${order.discount_total} ر.�
       {activeTab === 'customize' && (
         <div className="space-y-8">
           {/* Custom Logo Uploader & Emblem Settings */}
-          <LogoCustomizer />
+          <LogoCustomizer onSuccess={triggerToast} />
 
           {/* Announcement Bar Manager */}
           <AnnouncementSettingsManager onSuccess={triggerToast} />
@@ -1846,14 +1846,27 @@ ${order.discount_total ? `الخصم المطبق: -${order.discount_total} ر.�
               بيانات المتجر الأساسية ورقم الواتساب
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
               <div>
                 <label className="block font-semibold text-[#5F5751] mb-1">اسم المتجر (بالعربية)</label>
                 <input
                   type="text"
                   value={storeSettings.store_name_ar}
                   onChange={(e) => updateStoreSettings({ store_name_ar: e.target.value })}
+                  placeholder="ميني بازار"
                   className="w-full p-2.5 bg-[#FBF8F3] border border-[#D9C1A7] rounded-[10px]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#5F5751] mb-1">اسم المتجر (بالإنجليزية)</label>
+                <input
+                  type="text"
+                  value={storeSettings.store_name_en}
+                  onChange={(e) => updateStoreSettings({ store_name_en: e.target.value })}
+                  placeholder="Mini Bazaar"
+                  className="w-full p-2.5 bg-[#FBF8F3] border border-[#D9C1A7] rounded-[10px]"
+                  dir="ltr"
                 />
               </div>
 

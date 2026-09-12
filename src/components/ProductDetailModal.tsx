@@ -139,33 +139,32 @@ const ProductDetailModalDialog: React.FC<ProductDetailModalDialogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex flex-col items-center justify-start sm:justify-center p-2 sm:p-6 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
-        className="relative bg-white rounded-[28px] max-w-4xl w-full overflow-hidden shadow-2xl border border-[#E5D8C9] my-8"
+        className="relative bg-white rounded-[24px] sm:rounded-[28px] max-w-4xl w-full overflow-hidden shadow-2xl border border-[#E5D8C9] my-2 sm:my-8 max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Sticky Mobile & Desktop Close Button - Never disappears or scrolls off-screen */}
         <button
           onClick={onClose}
-          aria-label="إغلاق"
-          className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-[#F4ECE2] hover:bg-[#E7D4BC] text-[#6F584A] flex items-center justify-center transition-transform active:scale-95 shadow-xs"
+          aria-label="إغلاق نافذة تفاصيل المنتج"
+          className="sticky sm:absolute top-3 left-3 z-30 self-start sm:self-auto w-10 h-10 rounded-full bg-white/95 sm:bg-[#F4ECE2] hover:bg-[#E7D4BC] text-[#6F584A] flex items-center justify-center transition-transform active:scale-95 shadow-md border border-[#E5D8C9] ml-3 mt-2 sm:ml-0 sm:mt-0 shrink-0"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
           {/* Images Gallery Column */}
-          <div className="md:col-span-6 bg-[#FBF8F3] p-6 sm:p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-l border-[#E5D8C9]">
-            {/* Active Main Image */}
-            <div className={`relative w-full aspect-1/1 rounded-[20px] overflow-hidden bg-white border border-[#E7D4BC] shadow-xs mb-4 flex items-center justify-center ${
-              selectedProduct.image_fit === 'contain' ? 'p-3 sm:p-4' : ''
-            }`}>
+          <div className="md:col-span-6 bg-[#FBF8F3] p-4 sm:p-8 flex flex-col items-center justify-between border-b md:border-b-0 md:border-l border-[#E5D8C9]">
+            {/* Active Main Image - Fully responsive, complete image display with contain mode to prevent cropping on mobile */}
+            <div className="relative w-full max-h-[44vh] sm:max-h-[440px] aspect-4/3 sm:aspect-1/1 rounded-[18px] sm:rounded-[20px] overflow-hidden bg-white border border-[#E7D4BC] shadow-xs mb-3 sm:mb-4 flex items-center justify-center p-2 sm:p-3">
               <img
                 src={currentDisplayImage}
                 alt={activeVariant?.name_ar || selectedProduct.name_ar}
-                className={`w-full h-full ${
-                  selectedProduct.image_fit === 'contain' ? 'object-contain' : 'object-cover'
-                } object-center transition-all duration-300`}
+                className="w-full h-full object-contain object-center transition-all duration-300"
               />
               {!isAvailable && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-2xs flex items-center justify-center">
@@ -191,19 +190,19 @@ const ProductDetailModalDialog: React.FC<ProductDetailModalDialogProps> = ({
 
             {/* Thumbnail Selectors */}
             {safeImages.length > 1 && (
-              <div className="flex items-center gap-3 w-full overflow-x-auto pb-1">
+              <div className="flex items-center gap-2.5 sm:gap-3 w-full overflow-x-auto pb-1 pt-1">
                 {safeImages.map((img, idx) => (
                   <button
                     key={img.id || idx}
                     type="button"
                     onClick={() => handleThumbnailClick(img.path, idx)}
-                    className={`relative w-16 h-16 rounded-[12px] overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                    className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-[12px] overflow-hidden border-2 transition-all shrink-0 cursor-pointer bg-white ${
                       activePhotoUrl === img.path
                         ? 'border-[#2F2B28] ring-2 ring-[#C6A36A] shadow-xs scale-102'
                         : 'border-[#E7D4BC] opacity-70 hover:opacity-100 hover:border-[#8A7465]'
                     }`}
                   >
-                    <img src={img.path} alt={img.alt_text_ar || selectedProduct.name_ar} className="w-full h-full object-cover" />
+                    <img src={img.path} alt={img.alt_text_ar || selectedProduct.name_ar} className="w-full h-full object-contain p-1" />
                   </button>
                 ))}
               </div>

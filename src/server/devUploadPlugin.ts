@@ -78,9 +78,10 @@ export function devUploadPlugin(): Plugin {
           );
         }
 
-        // 1. Authentication & Admin Role verification (with graceful dev environment fallback)
+        // 1. Authentication & Admin Role verification (with customer receipt exemption)
         const authHeader = (req.headers['authorization'] as string) || '';
         const matchBearer = authHeader.match(/^Bearer\s+(\S+)$/i);
+        let isAdmin = false;
 
         if (matchBearer) {
           const token = matchBearer[1];
@@ -98,24 +99,17 @@ export function devUploadPlugin(): Plugin {
             }
 
             if (payload) {
-              const isAdmin =
+              isAdmin =
                 payload.admin === true ||
                 payload.admin === 'true' ||
                 payload.admin === 1 ||
                 (typeof payload.email === 'string' && payload.email.toLowerCase() === 'a.almkhlafi77@gmail.com') ||
                 Boolean(payload.email && typeof payload.email === 'string' && payload.email.includes('@'));
-
-              if (!isAdmin) {
-                res.statusCode = 401;
-                return res.end(
-                  JSON.stringify({
-                    success: false,
-                    error: 'عذراً، رفع وتخزين الصور مقتصر على المشرفين والمسؤولين المصرح لهم فقط.',
-                  })
-                );
-              }
             }
           }
+        } else {
+          // Dev fallback
+          isAdmin = true;
         }
 
         // 2. Parse Multipart/form-data
@@ -159,12 +153,20 @@ export function devUploadPlugin(): Plugin {
 
           let fileBuffer: Buffer | null = null;
           let detectedName = 'upload';
+          let requestedFolder = 'general';
 
           for (const part of parts) {
             const headerEndIndex = part.indexOf('\r\n\r\n');
             if (headerEndIndex === -1) continue;
 
             const headerText = part.subarray(0, headerEndIndex).toString('utf-8');
+
+            if (headerText.includes('name="folder"')) {
+              let folderVal = part.subarray(headerEndIndex + 4).toString('utf-8').trim();
+              if (folderVal.endsWith('\r\n')) folderVal = folderVal.slice(0, -2);
+              if (folderVal) requestedFolder = folderVal;
+            }
+
             if (
               headerText.includes('name="image"') ||
               headerText.includes('name="file"')
@@ -180,8 +182,18 @@ export function devUploadPlugin(): Plugin {
                 body = body.subarray(0, body.length - 2);
               }
               fileBuffer = body;
-              break;
             }
+          }
+
+          // If not customer receipt upload, enforce admin role
+          if (requestedFolder !== 'receipts' && !isAdmin) {
+            res.statusCode = 401;
+            return res.end(
+              JSON.stringify({
+                success: false,
+                error: 'عذراً، رفع وتخزين الصور مقتصر على المشرفين والمسؤولين المصرح لهم فقط.',
+              })
+            );
           }
 
           if (!fileBuffer || fileBuffer.length === 0) {

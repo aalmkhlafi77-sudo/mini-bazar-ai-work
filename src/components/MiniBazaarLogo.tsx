@@ -7,6 +7,8 @@ interface MiniBazaarLogoProps {
   textColor?: string;
   showTagline?: boolean;
   inverted?: boolean;
+  siteNameAr?: string;
+  siteNameEn?: string;
 }
 
 export const MiniBazaarLogo: React.FC<MiniBazaarLogoProps> = ({
@@ -15,15 +17,32 @@ export const MiniBazaarLogo: React.FC<MiniBazaarLogoProps> = ({
   textColor = '#2F2B28',
   showTagline = false,
   inverted = false,
+  siteNameAr: propSiteNameAr,
+  siteNameEn: propSiteNameEn,
 }) => {
-  // Try to access storeSettings for custom uploaded logo
+  // Try to access storeSettings for custom uploaded logo and editable names
   let customLogoUrl: string | undefined;
+  let storeNameAr = 'ميني بازار';
+  let storeNameEn = 'Mini Bazaar';
+
   try {
     const store = useStore();
-    customLogoUrl = store.storeSettings.custom_logo_url;
+    if (store?.storeSettings) {
+      customLogoUrl = store.storeSettings.custom_logo_url;
+      if (store.storeSettings.store_name_ar) {
+        storeNameAr = store.storeSettings.store_name_ar;
+      }
+      if (store.storeSettings.store_name_en) {
+        storeNameEn = store.storeSettings.store_name_en;
+      }
+    }
   } catch (e) {
     customLogoUrl = undefined;
   }
+
+  // Allow explicit prop overrides if passed
+  const activeSiteNameAr = propSiteNameAr ?? storeNameAr;
+  const activeSiteNameEn = propSiteNameEn ?? storeNameEn;
 
   const [imgError, setImgError] = React.useState(false);
 
@@ -68,7 +87,7 @@ export const MiniBazaarLogo: React.FC<MiniBazaarLogoProps> = ({
     );
   }
 
-  // Compact Header / Main Nav Logo: Emblem + "ميني بازار" on one clean line with no tagline wrap
+  // Compact Header / Main Nav Logo: Emblem + Site Name on one clean line with no tagline wrap
   if (variant === 'compact') {
     return (
       <div className={`inline-flex items-center gap-2.5 select-none whitespace-nowrap ${className}`}>
@@ -79,11 +98,13 @@ export const MiniBazaarLogo: React.FC<MiniBazaarLogoProps> = ({
               inverted ? 'text-[#F5E9D8]' : 'text-[#6F584A]'
             }`}
           >
-            ميني بازار
+            {activeSiteNameAr}
           </span>
-          <span className="hidden sm:inline text-[11px] font-semibold tracking-wider text-[#C6A36A] font-sans uppercase">
-            Mini Bazaar
-          </span>
+          {activeSiteNameEn && (
+            <span className="hidden sm:inline text-[11px] font-semibold tracking-wider text-[#C6A36A] font-sans uppercase">
+              {activeSiteNameEn}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -100,11 +121,13 @@ export const MiniBazaarLogo: React.FC<MiniBazaarLogoProps> = ({
               inverted ? 'text-[#F5E9D8]' : 'text-[#6F584A]'
             }`}
           >
-            ميني بازار
+            {activeSiteNameAr}
           </span>
-          <span className="text-xs font-semibold tracking-wider text-[#C6A36A] font-sans uppercase">
-            Mini Bazaar
-          </span>
+          {activeSiteNameEn && (
+            <span className="text-xs font-semibold tracking-wider text-[#C6A36A] font-sans uppercase">
+              {activeSiteNameEn}
+            </span>
+          )}
         </div>
       </div>
     </div>

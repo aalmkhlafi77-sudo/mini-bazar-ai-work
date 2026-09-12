@@ -149,7 +149,10 @@ export async function seedInitialFirestoreData(): Promise<CloudOperationResult> 
  * Real-time Products listener.
  * Empty collections are treated as valid empty states (e.g. admin cleared products).
  */
-export function listenToProducts(callback: (products: Product[]) => void) {
+export function listenToProducts(
+  callback: (products: Product[]) => void,
+  onError?: (error: any) => void
+) {
   try {
     const productsRef = collection(db, 'products');
     return onSnapshot(
@@ -166,9 +169,11 @@ export function listenToProducts(callback: (products: Product[]) => void) {
         if (error?.code !== 'resource-exhausted') {
           console.warn('Products sync snapshot notice:', error?.message);
         }
+        if (onError) onError(error);
       }
     );
   } catch (e) {
+    if (onError) onError(e);
     return () => {};
   }
 }
@@ -176,7 +181,10 @@ export function listenToProducts(callback: (products: Product[]) => void) {
 /**
  * Real-time Categories listener.
  */
-export function listenToCategories(callback: (categories: Category[]) => void) {
+export function listenToCategories(
+  callback: (categories: Category[]) => void,
+  onError?: (error: any) => void
+) {
   try {
     const categoriesRef = collection(db, 'categories');
     return onSnapshot(
@@ -193,9 +201,11 @@ export function listenToCategories(callback: (categories: Category[]) => void) {
         if (error?.code !== 'resource-exhausted') {
           console.warn('Categories sync snapshot notice:', error?.message);
         }
+        if (onError) onError(error);
       }
     );
   } catch (e) {
+    if (onError) onError(e);
     return () => {};
   }
 }
@@ -203,7 +213,10 @@ export function listenToCategories(callback: (categories: Category[]) => void) {
 /**
  * Real-time Brands listener.
  */
-export function listenToBrands(callback: (brands: Brand[]) => void) {
+export function listenToBrands(
+  callback: (brands: Brand[]) => void,
+  onError?: (error: any) => void
+) {
   try {
     const brandsRef = collection(db, 'brands');
     return onSnapshot(
@@ -220,9 +233,11 @@ export function listenToBrands(callback: (brands: Brand[]) => void) {
         if (error?.code !== 'resource-exhausted') {
           console.warn('Brands sync snapshot notice:', error?.message);
         }
+        if (onError) onError(error);
       }
     );
   } catch (e) {
+    if (onError) onError(e);
     return () => {};
   }
 }
@@ -286,13 +301,14 @@ export function listenToStoreSettings(
       (docSnap) => {
         if (docSnap.exists()) {
           currentStore = docSnap.data().storeSettings;
-          notify();
         }
+        notify();
       },
       (error) => {
         if (error?.code !== 'resource-exhausted') {
           console.warn('General settings sync notice:', error?.message);
         }
+        notify();
       }
     );
 
@@ -301,13 +317,14 @@ export function listenToStoreSettings(
       (docSnap) => {
         if (docSnap.exists()) {
           currentTheme = docSnap.data().themeSettings;
-          notify();
         }
+        notify();
       },
       (error) => {
         if (error?.code !== 'resource-exhausted') {
           console.warn('Theme settings sync notice:', error?.message);
         }
+        notify();
       }
     );
 
@@ -324,7 +341,10 @@ export function listenToStoreSettings(
  * Real-time Unified Hero Slides listener.
  * Reads ONLY from 'hero_slides' collection to avoid competing sources or size overflows.
  */
-export function listenToHeroSlides(callback: (slides: HeroSlide[]) => void) {
+export function listenToHeroSlides(
+  callback: (slides: HeroSlide[]) => void,
+  onError?: (error: any) => void
+) {
   try {
     const heroRef = collection(db, 'hero_slides');
     return onSnapshot(
@@ -341,9 +361,11 @@ export function listenToHeroSlides(callback: (slides: HeroSlide[]) => void) {
         if (error?.code !== 'resource-exhausted') {
           console.warn('Hero slides sync notice:', error?.message);
         }
+        if (onError) onError(error);
       }
     );
   } catch (e) {
+    if (onError) onError(e);
     return () => {};
   }
 }

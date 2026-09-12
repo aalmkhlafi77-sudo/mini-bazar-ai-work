@@ -93,6 +93,8 @@ interface StoreContextType {
   isFirebaseConfigured: boolean;
 
   // Catalog & Navigation
+  isInitialLoading: boolean;
+  initialSyncError: string | null;
   categories: Category[];
   brands: Brand[];
   products: Product[];
@@ -240,88 +242,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     recovery_email: adminUser?.email || '',
   };
 
-  // State initialization with safeStorage fallback
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = safeStorage.getItem('mb_categories');
-    return saved ? JSON.parse(saved) : initialCategories;
-  });
-
-  const [brands, setBrands] = useState<Brand[]>(() => {
-    const saved = safeStorage.getItem('mb_brands');
-    return saved ? JSON.parse(saved) : initialBrands;
-  });
-
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = safeStorage.getItem('mb_products');
-    if (!saved) return initialProducts;
-    try {
-      const parsed = JSON.parse(saved);
-      if (!Array.isArray(parsed) || parsed.length === 0) return initialProducts;
-      return parsed.map((p, idx) => ({
-        ...p,
-        id: p.id || `prod-${idx + 1}`,
-        name_ar: p.name_ar || 'منتج ميني بازار',
-        name_en: p.name_en || '',
-        price: typeof p.price === 'number' ? p.price : 0,
-        compare_at_price: typeof p.compare_at_price === 'number' ? p.compare_at_price : undefined,
-        rating: typeof p.rating === 'number' ? p.rating : 5.0,
-        reviews_count: typeof p.reviews_count === 'number' ? p.reviews_count : 0,
-        availability_status: p.availability_status || 'available',
-        image_fit: 'cover',
-        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [
-          {
-            id: `img-${p.id || idx}-def`,
-            product_id: p.id,
-            path: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80',
-            alt_text_ar: p.name_ar || 'منتج ميني بازار',
-            alt_text_en: p.name_en || 'Mini Bazaar Product',
-            sort_order: 1,
-            is_primary: true
-          }
-        ],
-        variants: Array.isArray(p.variants) && p.variants.length > 0 ? p.variants.map((v: any, vIdx: number) => ({
-          ...v,
-          id: v.id || `var-${p.id}-${vIdx}`,
-          name_ar: v.name_ar || 'الخيار الافتراضي',
-          name_en: v.name_en || '',
-          price: typeof v.price === 'number' ? v.price : (typeof p.price === 'number' ? p.price : 0),
-          availability_status: v.availability_status || 'available'
-        })) : [
-          {
-            id: `var-default-${p.id || idx}`,
-            product_id: p.id || `prod-${idx + 1}`,
-            name_ar: 'الخيار الافتراضي',
-            name_en: 'Default',
-            sku: p.sku || 'MB-DEF',
-            price: typeof p.price === 'number' ? p.price : 0,
-            availability_status: p.availability_status || 'available',
-            is_default: true,
-            sort_order: 1
-          }
-        ]
-      }));
-    } catch {
-      return initialProducts;
-    }
-  });
-
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
-    const saved = safeStorage.getItem('mb_hero_slides');
-    if (!saved) return initialHeroSlides;
-    try {
-      const parsed: HeroSlide[] = JSON.parse(saved);
-      // Ensure any legacy exaggerated heights revert to balanced standard
-      return parsed.map((slide) => ({
-        ...slide,
-        desktop_height:
-          slide.desktop_height === 'cinematic' || slide.desktop_height === 'fullscreen'
-            ? 'standard'
-            : (slide.desktop_height || 'standard'),
-      }));
-    } catch {
-      return initialHeroSlides;
-    }
-  });
+  // Catalog & Navigation states strictly populated from Firestore without stale or default fallback flash
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [initialSyncError, setInitialSyncError] = useState<string | null>(null);
 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     const saved = safeStorage.getItem('mb_store_settings');
@@ -496,34 +423,91 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // ================= CLOUD FIRESTORE SYNCHRONIZATION =================
   useEffect(() => {
-    // 1. Initial Cloud Seeding (if database is empty)
-    seedInitialFirestoreData();
+    if (!isFirebaseConfigured) {
+      setIsInitialLoading(false);
+      return;
+    }
 
-    // 2. Real-time Products Sync
-    const unsubProducts = listenToProducts((cloudProducts) => {
-      if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
-        setProducts(cloudProducts);
-        safeStorage.setItem('mb_products', JSON.stringify(cloudProducts));
+    let productsSynced = false;
+    let categoriesSynced = false;
+    let brandsSynced = false;
+    let heroSlidesSynced = false;
+    let settingsSynced = false;
+
+    const checkInitialSyncDone = () => {
+      if (productsSynced && categoriesSynced && brandsSynced && heroSlidesSynced && settingsSynced) {
+        setIsInitialLoading(false);
       }
-    });
+    };
 
-    // 3. Real-time Categories Sync
-    const unsubCategories = listenToCategories((cloudCategories) => {
-      if (Array.isArray(cloudCategories) && cloudCategories.length > 0) {
-        setCategories(cloudCategories);
-        safeStorage.setItem('mb_categories', JSON.stringify(cloudCategories));
+    const handleSyncError = (err: any) => {
+      let msg = 'تعذر الاتصال بقاعدة البيانات لجلب المعروضات الحالية. يرجى التحقق من اتصال الإنترنت أو المحاولة لاحقاً.';
+      if (err?.code === 'permission-denied') {
+        msg = 'تم رفض إذن الوصول إلى بيانات المتجر (Permission Denied). يرجى التأكد من صلاحيات وقواعد أمان Firestore.';
+      } else if (err?.code === 'unavailable') {
+        msg = 'خدمة Firestore غير متاحة حالياً أو انقطع اتصال الشبكة. يرجى التحقق من اتصالك بالإنترنت.';
       }
-    });
+      setInitialSyncError(msg);
+      setIsInitialLoading(false);
+    };
 
-    // 4. Real-time Brands Sync
-    const unsubBrands = listenToBrands((cloudBrands) => {
-      if (Array.isArray(cloudBrands) && cloudBrands.length > 0) {
-        setBrands(cloudBrands);
-        safeStorage.setItem('mb_brands', JSON.stringify(cloudBrands));
+    // Safety timeout: ensure loading skeleton resolves even on slow/degraded networks
+    const safetyTimer = setTimeout(() => {
+      if (!productsSynced || !categoriesSynced || !brandsSynced || !heroSlidesSynced || !settingsSynced) {
+        setInitialSyncError('استغرق الاتصال بقاعدة البيانات وقتاً أطول من المتوقع. يرجى التحقق من اتصال الإنترنت.');
       }
-    });
+      setIsInitialLoading(false);
+    }, 3500);
 
-    // 5. Real-time Orders Sync
+    // 1. Real-time Products Sync
+    const unsubProducts = listenToProducts(
+      (cloudProducts) => {
+        if (Array.isArray(cloudProducts)) {
+          setProducts(cloudProducts);
+          safeStorage.setItem('mb_products', JSON.stringify(cloudProducts));
+        }
+        productsSynced = true;
+        checkInitialSyncDone();
+      },
+      (err) => {
+        productsSynced = true;
+        handleSyncError(err);
+      }
+    );
+
+    // 2. Real-time Categories Sync
+    const unsubCategories = listenToCategories(
+      (cloudCategories) => {
+        if (Array.isArray(cloudCategories)) {
+          setCategories(cloudCategories);
+          safeStorage.setItem('mb_categories', JSON.stringify(cloudCategories));
+        }
+        categoriesSynced = true;
+        checkInitialSyncDone();
+      },
+      (err) => {
+        categoriesSynced = true;
+        handleSyncError(err);
+      }
+    );
+
+    // 3. Real-time Brands Sync
+    const unsubBrands = listenToBrands(
+      (cloudBrands) => {
+        if (Array.isArray(cloudBrands)) {
+          setBrands(cloudBrands);
+          safeStorage.setItem('mb_brands', JSON.stringify(cloudBrands));
+        }
+        brandsSynced = true;
+        checkInitialSyncDone();
+      },
+      (err) => {
+        brandsSynced = true;
+        handleSyncError(err);
+      }
+    );
+
+    // 4. Real-time Orders Sync
     const unsubOrders = listenToOrders((cloudOrders) => {
       if (Array.isArray(cloudOrders)) {
         setOrders(cloudOrders);
@@ -531,7 +515,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     });
 
-    // 6. Real-time Store Settings & Customization Sync
+    // 5. Real-time Store Settings & Customization Sync
     const unsubSettings = listenToStoreSettings((cloudData) => {
       if (cloudData.storeSettings) {
         setStoreSettings(cloudData.storeSettings);
@@ -541,17 +525,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setThemeSettings(cloudData.themeSettings);
         safeStorage.setItem('mb_theme_settings', JSON.stringify(cloudData.themeSettings));
       }
+      settingsSynced = true;
+      checkInitialSyncDone();
     });
 
-    // 7. Real-time Hero Slides Sync (Single Source of Truth)
-    const unsubHeroSlides = listenToHeroSlides((cloudSlides) => {
-      if (Array.isArray(cloudSlides) && cloudSlides.length > 0) {
-        setHeroSlides(cloudSlides);
-        safeStorage.setItem('mb_hero_slides', JSON.stringify(cloudSlides));
+    // 6. Real-time Hero Slides Sync (Single Source of Truth)
+    const unsubHeroSlides = listenToHeroSlides(
+      (cloudSlides) => {
+        if (Array.isArray(cloudSlides)) {
+          setHeroSlides(cloudSlides);
+          safeStorage.setItem('mb_hero_slides', JSON.stringify(cloudSlides));
+        }
+        heroSlidesSynced = true;
+        checkInitialSyncDone();
+      },
+      (err) => {
+        heroSlidesSynced = true;
+        handleSyncError(err);
       }
-    });
+    );
 
     return () => {
+      clearTimeout(safetyTimer);
       unsubProducts();
       unsubCategories();
       unsubBrands();
@@ -559,7 +554,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       unsubSettings();
       unsubHeroSlides();
     };
-  }, []);
+  }, [isFirebaseConfigured]);
 
   // Cart operations with comprehensive safety guards
   const addToCart = (product: Product, variantId?: string, quantity: number = 1, openDrawer: boolean = false) => {
@@ -1323,6 +1318,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         adminCredentials,
         isAdminAuthenticated,
         isFirebaseConfigured,
+        isInitialLoading,
+        initialSyncError,
         loginAdmin,
         logoutAdmin,
         recoverAdminPassword,

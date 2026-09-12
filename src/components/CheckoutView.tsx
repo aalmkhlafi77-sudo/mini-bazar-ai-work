@@ -59,6 +59,12 @@ export const CheckoutView: React.FC = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, []);
+
   if (cart.length === 0) {
     return (
       <div className="py-20 px-4 text-center max-w-lg mx-auto">
@@ -92,9 +98,68 @@ export const CheckoutView: React.FC = () => {
     setTimeout(() => setCopiedIban(false), 2500);
   };
 
+  const compressReceiptImage = (file: File): Promise<{ dataUrl: string; blob: Blob }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          const maxDim = 1200;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                resolve({
+                  dataUrl,
+                  blob: blob || new Blob([dataUrl], { type: 'image/jpeg' }),
+                });
+              },
+              'image/jpeg',
+              0.82
+            );
+            return;
+          }
+          const rawData = (e.target?.result as string) || '';
+          resolve({ dataUrl: rawData, blob: file });
+        };
+        img.onerror = () => {
+          const rawData = (e.target?.result as string) || '';
+          resolve({ dataUrl: rawData, blob: file });
+        };
+        img.src = (e.target?.result as string) || '';
+      };
+      reader.onerror = () => {
+        resolve({ dataUrl: '', blob: file });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleProcessFile = async (file: File) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+
+    // Support mobile camera captures which may have generic or empty mime-types
+    const isImage =
+      !file.type ||
+      file.type.startsWith('image/') ||
+      /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(file.name);
+
+    if (!isImage) {
       setErrorMessage('يرجى اختيار ملف صورة صالح (JPG, PNG, WebP) لإشعار الحوالة');
       return;
     }
@@ -102,22 +167,48 @@ export const CheckoutView: React.FC = () => {
     try {
       setIsProcessingReceipt(true);
       setErrorMessage(null);
-      const res = await imageUploadService.upload(file, {
-        folder: 'receipts',
-        maxDimension: 1200,
-        quality: 0.82,
-      });
 
-      if (res.success && res.url) {
-        setBankReceiptImage(res.url);
+      // Step 1: Compress instantly on client for zero-lag mobile preview and reliable state retention
+      const { dataUrl, blob } = await compressReceiptImage(file);
+      if (dataUrl) {
+        setBankReceiptImage(dataUrl);
         setBankReceiptFileName(file.name || 'bank_receipt.jpg');
         setIsBankTransferConfirmed(true);
-      } else {
-        setErrorMessage(res.error || 'تعذر معالجة صورة الإشعار');
+      }
+
+      // Step 2: Concurrently upload to server backend for permanent storage URL
+      try {
+        const uploadFile = new File([blob], file.name ? file.name.replace(/\.[^.]+$/, '.jpg') : 'receipt.jpg', {
+          type: 'image/jpeg',
+        });
+        const res = await imageUploadService.upload(uploadFile, {
+          folder: 'receipts',
+          maxDimension: 1200,
+          quality: 0.82,
+        });
+
+        if (res.success && res.url) {
+          setBankReceiptImage(res.url);
+        }
+      } catch (uploadErr) {
+        console.warn('Backend upload note for bank receipt (preserved compressed image):', uploadErr);
       }
     } catch (err: any) {
       console.error('Error processing receipt image:', err);
-      setErrorMessage(err?.message || 'تعذر معالجة صورة الإشعار، يرجى المحاولة بصورة أخرى أو بصيغة JPG');
+      // Fallback: direct FileReader
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setBankReceiptImage(e.target.result as string);
+            setBankReceiptFileName(file.name || 'bank_receipt.jpg');
+            setIsBankTransferConfirmed(true);
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch {
+        setErrorMessage(err?.message || 'تعذر معالجة صورة الإشعار، يرجى المحاولة بصورة أخرى');
+      }
     } finally {
       setIsProcessingReceipt(false);
     }

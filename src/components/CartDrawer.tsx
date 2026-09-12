@@ -23,6 +23,9 @@ export const CartDrawer: React.FC = () => {
   const handleProceedToCheckout = () => {
     setIsCartOpen(false);
     setActiveView('checkout');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   return (

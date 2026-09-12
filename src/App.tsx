@@ -21,6 +21,12 @@ import { CartNotificationToast } from './components/CartNotificationToast';
 const MainLayout: React.FC = () => {
   const { activeView } = useStore();
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [activeView]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FBF8F3] text-[#2F2B28] antialiased selection:bg-[#E7D4BC] selection:text-[#6F584A]">
       {/* Global Header with Single-Line Seamless Infinite Marquee & Burger Drawer */}

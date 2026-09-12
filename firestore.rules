@@ -67,8 +67,10 @@ service cloud.firestore {
             'id', 'order_number', 'customer_name_snapshot', 'customer_phone_snapshot',
             'customer_email_snapshot', 'address_snapshot', 'subtotal', 'delivery_fee',
             'discount_total', 'grand_total', 'delivery_method_snapshot',
-            'payment_method_snapshot', 'status', 'notes', 'receipt_image',
-            'bank_transfer_confirmed', 'created_at', 'updated_at', 'items', 'status_history'
+            'payment_method_snapshot', 'status', 'notes', 'customer_notes', 'admin_notes',
+            'receipt_image', 'bank_transfer_receipt', 'bank_transfer_confirmed',
+            'bank_transfer_verified', 'bank_transfer_verified_at', 'bank_transfer_notes',
+            'source', 'placed_at', 'created_at', 'updated_at', 'items', 'logs', 'status_history'
           ])
         && request.resource.data.customer_name_snapshot is string
         && request.resource.data.customer_name_snapshot.size() > 0
@@ -80,7 +82,8 @@ service cloud.firestore {
         && request.resource.data.grand_total >= 0
         && request.resource.data.grand_total <= 10000000
         && (!('items' in request.resource.data) || (request.resource.data.items is list && request.resource.data.items.size() <= 200))
-        && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000));
+        && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
+        && (!('customer_notes' in request.resource.data) || (request.resource.data.customer_notes is string && request.resource.data.customer_notes.size() <= 2000));
       allow update, delete: if isAdmin() && isValidId(orderId);
     }
 
