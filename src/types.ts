@@ -402,9 +402,13 @@ export interface StorePoliciesSettings {
   section_title_ar: string;
   section_enabled: boolean;
   default_policy_id?: string;
-  display_mode?: 'tabs' | 'sidebar';
+  display_mode?: 'tabs' | 'sidebar' | 'list';
   policies: StorePolicyItem[];
 }
+
+export type AboutUsConfig = AboutUsSettings;
+export type AboutUsValue = AboutUsValueItem;
+export type StorePoliciesConfig = StorePoliciesSettings;
 
 export type SocialPlatform =
   | 'instagram'
