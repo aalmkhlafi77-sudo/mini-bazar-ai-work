@@ -13,12 +13,20 @@ import {
   Store,
   FileText,
   CheckCircle2,
+  Info,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { SocialIcon } from './SocialIcon';
 
 export const Footer: React.FC = () => {
-  const { storeSettings, categories, setSelectedCategory, setActiveView } = useStore();
+  const {
+    storeSettings,
+    categories,
+    setSelectedCategory,
+    setActiveView,
+    openAboutUsModal,
+    openPoliciesModal,
+  } = useStore();
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -49,6 +57,31 @@ export const Footer: React.FC = () => {
           { id: 'c-2', text_ar: 'بوكس الإهداء الفاخر وشريط الساتان مجاناً.' },
           { id: 'c-3', text_ar: 'دفع آمن مع التحويل البنكي المعتمد.' },
         ];
+
+  // About Us configuration
+  const aboutUsConfig = storeSettings.about_us;
+  const isAboutUsVisible =
+    Boolean(aboutUsConfig?.enabled !== false) &&
+    Boolean(aboutUsConfig?.published !== false) &&
+    Boolean(
+      (aboutUsConfig?.paragraphs && aboutUsConfig.paragraphs.some((p) => p.text_ar?.trim())) ||
+      aboutUsConfig?.vision_ar?.trim() ||
+      aboutUsConfig?.subtitle_ar?.trim()
+    );
+
+  // Store Policies configuration
+  const policiesConfig = storeSettings.store_policies;
+  const activePolicies = (policiesConfig?.policies || [])
+    .filter(
+      (p) => p.is_active !== false && p.is_published !== false && Boolean(p.content_ar && p.content_ar.trim())
+    )
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  const isStoreInfoSectionVisible =
+    Boolean(policiesConfig?.section_enabled !== false) &&
+    (isAboutUsVisible || activePolicies.length > 0);
+
+  const storeInfoTitle = policiesConfig?.section_title_ar || 'معلومات المتجر';
 
   const paymentMethods =
     storeSettings.footer_payment_methods && storeSettings.footer_payment_methods.length > 0
@@ -88,8 +121,8 @@ export const Footer: React.FC = () => {
     } else if (action === 'admin') {
       setActiveView('admin');
       scrollToTop();
-    } else if (action === 'orders') {
-      setActiveView('admin');
+    } else if (action === 'orders' || action === 'track-order') {
+      setActiveView('track-order');
       scrollToTop();
     }
   };
@@ -228,14 +261,14 @@ export const Footer: React.FC = () => {
           {/* Section 2: روابط سريعة (Navigation Links) - 2 Columns */}
           <div className="lg:col-span-2 space-y-4">
             <h3 style={{ color: footerHeadingColor, borderColor: footerBorderColor }} className="text-sm font-bold font-heading tracking-wide border-b pb-2 inline-block">
-              روابط
+              روابط سريعة
             </h3>
             <ul className="space-y-2.5 text-xs">
               <li>
                 <button
                   onClick={() => handleLinkClick('store')}
                   style={{ color: footerLinkColor }}
-                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5"
+                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>المتجر</span>
                 </button>
@@ -244,33 +277,24 @@ export const Footer: React.FC = () => {
                 <button
                   onClick={() => handleLinkClick('wishlist')}
                   style={{ color: footerLinkColor }}
-                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5"
+                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>المفضلة</span>
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => handleLinkClick('orders')}
+                  onClick={() => handleLinkClick('track-order')}
                   style={{ color: footerLinkColor }}
-                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5"
+                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>طلباتي</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleLinkClick('store')}
-                  style={{ color: footerLinkColor }}
-                  className="hover:opacity-75 transition-opacity flex items-center gap-1.5"
-                >
-                  <span>السياسات وطرق الدفع</span>
+                  <span>تتبع واستعراض الطلب</span>
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => handleLinkClick('admin')}
-                  className="text-[#C6A36A] hover:underline font-semibold flex items-center gap-1.5"
+                  className="text-[#C6A36A] hover:underline font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>لوحة إدارة المتجر</span>
                 </button>
@@ -278,22 +302,71 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Section 3: تعهدات ميني بازار (Commitments) - 3 Columns */}
-          <div className="lg:col-span-3 space-y-4">
-            <h3 style={{ color: footerHeadingColor, borderColor: footerBorderColor }} className="text-sm font-bold font-heading tracking-wide border-b pb-2 inline-block">
-              تعهدات ميني بازار
-            </h3>
-            <div className="space-y-2.5 text-xs" style={{ color: footerTextColor }}>
+          {/* Section 3: معلومات المتجر والسياسات (Store Info & Policies) - 3 Columns */}
+          {isStoreInfoSectionVisible && (
+            <div className="lg:col-span-3 space-y-4">
+              <h3 style={{ color: footerHeadingColor, borderColor: footerBorderColor }} className="text-sm font-bold font-heading tracking-wide border-b pb-2 inline-block">
+                {storeInfoTitle}
+              </h3>
+              <ul className="space-y-2.5 text-xs">
+                {/* About Us Link */}
+                {isAboutUsVisible && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={openAboutUsModal}
+                      style={{ color: footerLinkColor }}
+                      className="hover:opacity-75 transition-opacity flex items-center gap-1.5 cursor-pointer text-right"
+                      title={aboutUsConfig?.footer_link_title_ar || 'من نحن'}
+                    >
+                      <Info className="w-3.5 h-3.5 text-[#C6A36A] shrink-0" />
+                      <span>{aboutUsConfig?.footer_link_title_ar || 'من نحن'}</span>
+                    </button>
+                  </li>
+                )}
+
+                {/* Policies Links */}
+                {activePolicies.map((pol) => (
+                  <li key={pol.id}>
+                    <button
+                      type="button"
+                      onClick={() => openPoliciesModal(pol.key || pol.id)}
+                      style={{ color: footerLinkColor }}
+                      className="hover:opacity-75 transition-opacity flex items-center gap-1.5 cursor-pointer text-right"
+                      title={pol.footer_link_text_ar || pol.title_ar}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#C6A36A]/60 shrink-0" />
+                      <span>{pol.footer_link_text_ar || pol.title_ar}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+        </div>
+
+        {/* Section 4: تعهدات ميني بازار الملكية (Commitments Strip) */}
+        {commitments.length > 0 && (
+          <div className="py-6 border-b" style={{ borderColor: footerBorderColor }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {commitments.map((com) => (
-                <div key={com.id} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#C6A36A] shrink-0 mt-0.5" />
-                  <span className="leading-relaxed">{com.text_ar}</span>
+                <div
+                  key={com.id}
+                  style={{
+                    backgroundColor: footerBadgeBg,
+                    borderColor: footerBorderColor,
+                    color: footerTextColor,
+                  }}
+                  className="flex items-center gap-3 p-3.5 rounded-xl border text-xs shadow-2xs transition-colors"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-[#C6A36A] shrink-0" />
+                  <span className="leading-relaxed font-medium">{com.text_ar}</span>
                 </div>
               ))}
             </div>
           </div>
-
-        </div>
+        )}
 
         {/* Payment Methods & Copyright & Designer Signature */}
         <div className="pt-8 space-y-6">

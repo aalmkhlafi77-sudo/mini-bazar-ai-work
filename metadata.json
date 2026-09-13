@@ -1,6 +1,6 @@
 {
   "name": "ميني بازار — Mini Bazaar",
   "description": "متجر إلكتروني فاخر للمنتجات المختارة — رفاهية تفوق التوقعات",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": ["camera", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

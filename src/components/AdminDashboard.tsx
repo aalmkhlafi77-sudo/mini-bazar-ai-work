@@ -39,6 +39,7 @@ import {
   Calendar,
   BarChart3,
   CheckCircle2,
+  MapPin,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Order, OrderStatus, Product, HeroSlide } from '../types';
@@ -66,6 +67,7 @@ export const AdminDashboard: React.FC = () => {
     categories,
     brands,
     updateOrderStatus,
+    updateOrderAdminNotes,
     verifyBankTransferReceipt,
     addManualOrder,
     saveProduct,
@@ -94,6 +96,7 @@ export const AdminDashboard: React.FC = () => {
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
   const [statusChangeNote, setStatusChangeNote] = useState('');
   const [newStatusToApply, setNewStatusToApply] = useState<OrderStatus>('confirmed');
+  const [adminOrderNoteText, setAdminOrderNoteText] = useState('');
 
   // Bank Transfer Receipt verification states
   const [adminReceiptPreviewModal, setAdminReceiptPreviewModal] = useState<string | null>(null);
@@ -128,9 +131,16 @@ export const AdminDashboard: React.FC = () => {
 
   const handleUpdateStatus = () => {
     if (!selectedOrderForDetail) return;
-    updateOrderStatus(selectedOrderForDetail.id, newStatusToApply, statusChangeNote);
+    updateOrderStatus(selectedOrderForDetail.id, newStatusToApply, statusChangeNote, adminOrderNoteText);
     setStatusChangeNote('');
-    setSelectedOrderForDetail((prev) => (prev ? { ...prev, status: newStatusToApply } : null));
+    setSelectedOrderForDetail((prev) => (prev ? { ...prev, status: newStatusToApply, admin_notes: adminOrderNoteText } : null));
+    triggerToast();
+  };
+
+  const handleSaveSupervisorNotes = () => {
+    if (!selectedOrderForDetail) return;
+    updateOrderAdminNotes(selectedOrderForDetail.id, adminOrderNoteText);
+    setSelectedOrderForDetail((prev) => (prev ? { ...prev, admin_notes: adminOrderNoteText } : null));
     triggerToast();
   };
 
@@ -1381,6 +1391,7 @@ ${order.discount_total ? `الخصم المطبق: -${order.discount_total} ر.�
                         onClick={() => {
                           setSelectedOrderForDetail(ord);
                           setNewStatusToApply(ord.status);
+                          setAdminOrderNoteText(ord.admin_notes || '');
                         }}
                         className="px-3 py-1.5 bg-[#F4ECE2] hover:bg-[#E7D4BC] text-[#6F584A] rounded-[8px] font-bold"
                       >
@@ -1435,6 +1446,21 @@ ${order.discount_total ? `الخصم المطبق: -${order.discount_total} ر.�
                       ملاحظة العميل: {selectedOrderForDetail.customer_notes}
                     </p>
                   )}
+
+                  {/* Geolocation & Map link */}
+                  {(selectedOrderForDetail.address_snapshot.latitude && selectedOrderForDetail.address_snapshot.longitude) || selectedOrderForDetail.address_snapshot.map_url ? (
+                    <div className="pt-2">
+                      <a
+                        href={selectedOrderForDetail.address_snapshot.map_url || `https://www.google.com/maps?q=${selectedOrderForDetail.address_snapshot.latitude},${selectedOrderForDetail.address_snapshot.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#EADCCB] hover:bg-[#DFCBB4] text-[#2F2B28] text-[11px] font-bold border border-[#C6A36A]/50 transition-colors"
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-[#C6A36A]" />
+                        <span>موقع العميل على الخريطة</span>
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Items */}
@@ -1663,6 +1689,38 @@ ${order.discount_total ? `الخصم المطبق: -${order.discount_total} ر.�
                   </div>
                 </div>
               )}
+
+              {/* Supervisor Notes Section for Customer Tracking */}
+              <div className="border-t border-[#E5D8C9] pt-4 mb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-[#C6A36A]" />
+                    <span className="text-xs font-bold text-[#6F584A]">
+                      ملاحظات المشرف الموجهة للعميل (يقرأها العميل في صفحة تتبع الطلب):
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-[#8A7465]">
+                    تظهر للعميل فوراً عند الاستعلام برقم الطلب ورقم الجوال
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <textarea
+                    rows={2}
+                    placeholder="اكتب ملاحظات المشرف هنا (مثال: تم تغليف طلبك الفاخر بعناية، رقم تتبع الشحنة مع أرامكس 3849102...)"
+                    value={adminOrderNoteText}
+                    onChange={(e) => setAdminOrderNoteText(e.target.value)}
+                    className="flex-1 bg-[#FAF6F0] border border-[#D9C1A7] rounded-[12px] p-3 text-xs text-[#2F2B28] focus:bg-white focus:outline-hidden focus:border-[#C6A36A] leading-relaxed"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveSupervisorNotes}
+                    className="shrink-0 self-end sm:self-stretch flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-[12px] bg-[#6F584A] hover:bg-[#58453A] text-white text-xs font-bold transition-colors shadow-xs"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>حفظ ملاحظة المشرف</span>
+                  </button>
+                </div>
+              </div>
 
               {/* Status Change Audit Logs */}
               <div className="border-t border-[#E5D8C9] pt-4">

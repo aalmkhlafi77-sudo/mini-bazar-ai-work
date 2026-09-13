@@ -11,15 +11,25 @@ import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutView } from './components/CheckoutView';
 import { OrderSuccessView } from './components/OrderSuccessView';
+import { OrderTrackingView } from './components/OrderTrackingView';
 import { WishlistView } from './components/WishlistView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Footer } from './components/Footer';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { BottomNav } from './components/BottomNav';
 import { CartNotificationToast } from './components/CartNotificationToast';
+import { AboutUsModal } from './components/AboutUsModal';
+import { PoliciesModal } from './components/PoliciesModal';
 
 const MainLayout: React.FC = () => {
-  const { activeView } = useStore();
+  const {
+    activeView,
+    isAboutUsModalOpen,
+    closeAboutUsModal,
+    isPoliciesModalOpen,
+    closePoliciesModal,
+    activePolicy,
+  } = useStore();
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -49,6 +59,8 @@ const MainLayout: React.FC = () => {
 
         {activeView === 'order-success' && <OrderSuccessView />}
 
+        {activeView === 'track-order' && <OrderTrackingView />}
+
         {activeView === 'admin' && <AdminDashboard />}
       </main>
 
@@ -65,6 +77,15 @@ const MainLayout: React.FC = () => {
       <ErrorBoundary fallback={null}>
         <ProductDetailModal />
       </ErrorBoundary>
+      <AboutUsModal
+        isOpen={isAboutUsModalOpen}
+        onClose={closeAboutUsModal}
+      />
+      <PoliciesModal
+        isOpen={isPoliciesModalOpen}
+        onClose={closePoliciesModal}
+        selectedPolicyKey={activePolicy}
+      />
       <CartNotificationToast />
       <FloatingWhatsApp />
     </div>

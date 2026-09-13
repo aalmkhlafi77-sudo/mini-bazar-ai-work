@@ -28,9 +28,24 @@ import {
   Paintbrush,
   CheckCircle2,
   Info,
+  FileText,
+  Heart,
+  Target,
+  Calendar,
+  ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { SocialLink, SocialPlatform, NavigationItem } from '../../types';
+import {
+  SocialLink,
+  SocialPlatform,
+  NavigationItem,
+  AboutUsConfig,
+  AboutUsParagraph,
+  AboutUsValue,
+  StorePoliciesConfig,
+  StorePolicyItem,
+} from '../../types';
 import { MiniBazaarLogo } from '../MiniBazaarLogo';
 import { SocialIcon } from '../SocialIcon';
 
@@ -50,7 +65,11 @@ type CustomizableElement =
   | 'footer_links'
   | 'footer_badges'
   | 'navigation_items'
-  | 'footer_content';
+  | 'about_us'
+  | 'store_policies'
+  | 'footer_content'
+  | 'footer_contact'
+  | 'footer_social';
 
 interface PresetTheme {
   id: string;
@@ -247,7 +266,7 @@ const CURATED_SWATCHES = [
 ];
 
 export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ onSuccess }) => {
-  const { storeSettings, updateStoreSettings, categories } = useStore();
+  const { storeSettings, updateStoreSettings, categories, openAboutUsModal, openPoliciesModal } = useStore();
 
   const [selectedElement, setSelectedElement] = useState<CustomizableElement>('all');
   const [saveToast, setSaveToast] = useState(false);
@@ -264,6 +283,8 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
   const [newSocialPlatform, setNewSocialPlatform] = useState<SocialPlatform>('instagram');
   const [newSocialTitle, setNewSocialTitle] = useState('');
   const [newSocialUrl, setNewSocialUrl] = useState('');
+  const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
+  const [editingSocialLink, setEditingSocialLink] = useState<SocialLink | null>(null);
 
   // Commitments state
   const currentCommitments = storeSettings.footer_commitments || [
@@ -488,6 +509,83 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
   };
 
   // Social Links Handlers
+  const handleOpenAddSocialModal = () => {
+    setEditingSocialLink({
+      id: `soc-${Date.now()}`,
+      platform: 'instagram',
+      title_ar: '',
+      url: '',
+      is_active: true,
+      sort_order: currentSocialLinks.length + 1,
+    });
+    setIsSocialModalOpen(true);
+  };
+
+  const handleOpenEditSocialModal = (link: SocialLink) => {
+    setEditingSocialLink({ ...link });
+    setIsSocialModalOpen(true);
+  };
+
+  const handleSaveSocialModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSocialLink || !editingSocialLink.url.trim()) return;
+
+    let updatedList: SocialLink[];
+    const exists = currentSocialLinks.some((it) => it.id === editingSocialLink.id);
+    if (exists) {
+      updatedList = currentSocialLinks.map((it) =>
+        it.id === editingSocialLink.id
+          ? {
+              ...editingSocialLink,
+              title_ar: editingSocialLink.title_ar.trim() || editingSocialLink.platform,
+              url: editingSocialLink.url.trim(),
+            }
+          : it
+      );
+    } else {
+      updatedList = [
+        ...currentSocialLinks,
+        {
+          ...editingSocialLink,
+          title_ar: editingSocialLink.title_ar.trim() || editingSocialLink.platform,
+          url: editingSocialLink.url.trim(),
+        },
+      ];
+    }
+    updateStoreSettings({ social_links: updatedList });
+    setIsSocialModalOpen(false);
+    setEditingSocialLink(null);
+    handleNotify();
+  };
+
+  const handleToggleSocialLink = (id: string) => {
+    const updated = currentSocialLinks.map((s) =>
+      s.id === id ? { ...s, is_active: s.is_active === false ? true : false } : s
+    );
+    updateStoreSettings({ social_links: updated });
+    handleNotify();
+  };
+
+  const handleMoveSocialLink = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) ||
+      (direction === 'down' && index === currentSocialLinks.length - 1)
+    ) {
+      return;
+    }
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const reordered = [...currentSocialLinks];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const reindexed = reordered.map((item, idx) => ({
+      ...item,
+      sort_order: idx + 1,
+    }));
+    updateStoreSettings({ social_links: reindexed });
+    handleNotify();
+  };
+
   const handleAddSocialLink = () => {
     if (!newSocialUrl.trim()) return;
     const newLink: SocialLink = {
@@ -623,7 +721,11 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
               <option value="footer_text">✍️ نصوص وفقرات الفوتر ومعلومات المتجر</option>
               <option value="footer_links">🧭 روابط وأزرار وأفعال الفوتر</option>
               <option value="footer_badges">💳 شارات الدفع والتواصل في الفوتر</option>
-              <option value="footer_content">🛡️ إدارة محتوى الفوتر (التعهدات، السوشل ميديا، طرق الدفع، التوثيق)</option>
+              <option value="about_us">📖 إدارة "من نحن" والنافذة التعريفية الموحدة (القصة، الرؤية، القيم)</option>
+              <option value="store_policies">⚖️ إدارة "معلومات وسياسات المتجر والخصوصية" (السياسات الـ 5 والمحرر القانوني)</option>
+              <option value="footer_social">📱 إدارة قنوات وحسابات السوشل ميديا (تعديل العناوين، الروابط، والترتيب)</option>
+              <option value="footer_contact">📞 بيانات التواصل ورقم الاتصال، البريد، واتساب، والعنوان في الفوتر</option>
+              <option value="footer_content">🛡️ إدارة محتوى الفوتر الشامل (التعهدات، السوشل ميديا، التواصل، طرق الدفع)</option>
             </optgroup>
           </select>
         </div>
@@ -1626,29 +1728,129 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
 
             {/* Social Links */}
             <div className="space-y-3 pt-3 border-t border-[#E5D8C9]">
-              <label className="block text-xs font-bold text-[#5F5751]">
-                قنوات وحسابات السوشل ميديا في الفوتر:
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-[#5F5751] flex items-center gap-1.5">
+                  <Share2 className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>قنوات وحسابات السوشل ميديا في الفوتر:</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleOpenAddSocialModal}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6F584A] hover:bg-[#5A4538] text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>إضافة حساب جديد</span>
+                </button>
+              </div>
+
               <div className="space-y-2">
-                {currentSocialLinks.map((soc) => (
-                  <div key={soc.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF6F0] border border-[#E5D8C9] text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#2F2B28] text-white flex items-center justify-center">
-                        <SocialIcon platform={soc.platform} className="w-3 h-3" />
+                {currentSocialLinks.map((soc, idx) => (
+                  <div
+                    key={soc.id}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                      soc.is_active !== false
+                        ? 'bg-[#FAF6F0] border-[#E5D8C9]'
+                        : 'bg-gray-100 border-gray-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-5 h-5 rounded-full bg-white border border-[#E5D8C9] text-[10px] font-bold text-[#6F584A] flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+                      <div className="w-7 h-7 rounded-full bg-[#2F2B28] text-white flex items-center justify-center shrink-0">
+                        <SocialIcon platform={soc.platform} className="w-3.5 h-3.5" />
                       </div>
-                      <span className="font-bold text-[#2F2B28]">{soc.title_ar}</span>
-                      <span className="text-[10px] text-[#8A7465] font-mono" dir="ltr">{soc.url}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-[#2F2B28] truncate">{soc.title_ar}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-[#E7D4BC]/40 text-[#6F584A] font-medium shrink-0">
+                            {soc.platform === 'instagram'
+                              ? 'إنستغرام'
+                              : soc.platform === 'tiktok'
+                              ? 'تيك توك'
+                              : soc.platform === 'snapchat'
+                              ? 'سناب شات'
+                              : soc.platform === 'twitter'
+                              ? 'إكس (تويتر)'
+                              : soc.platform === 'whatsapp'
+                              ? 'واتساب'
+                              : soc.platform === 'telegram'
+                              ? 'تيليجرام'
+                              : soc.platform === 'facebook'
+                              ? 'فيسبوك'
+                              : soc.platform === 'youtube'
+                              ? 'يوتيوب'
+                              : soc.platform === 'linkedin'
+                              ? 'لينكد إن'
+                              : soc.platform === 'pinterest'
+                              ? 'بينترست'
+                              : 'رابط مخصص'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-[#8A7465] font-mono block truncate" dir="ltr">
+                          {soc.url}
+                        </span>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSocialLink(soc.id)}
-                      className="text-red-500 hover:text-red-700 p-1"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Move up */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSocialLink(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1.5 text-[#8A7465] hover:text-[#2F2B28] disabled:opacity-30 cursor-pointer"
+                        title="تحريك لأعلى"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Move down */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveSocialLink(idx, 'down')}
+                        disabled={idx === currentSocialLinks.length - 1}
+                        className="p-1.5 text-[#8A7465] hover:text-[#2F2B28] disabled:opacity-30 cursor-pointer"
+                        title="تحريك لأسفل"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Toggle active */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSocialLink(soc.id)}
+                        className={`p-1.5 rounded-lg text-xs font-bold cursor-pointer ${
+                          soc.is_active !== false
+                            ? 'text-[#25D366] hover:bg-[#25D366]/10'
+                            : 'text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={soc.is_active !== false ? 'مفعل في الفوتر (انقري للتعطيل)' : 'معطل (انقري للتفعيل)'}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Edit button */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditSocialModal(soc)}
+                        className="p-1.5 text-[#6F584A] hover:text-[#2F2B28] hover:bg-[#E5D8C9]/40 rounded-lg cursor-pointer"
+                        title="تعديل القناة والعنوان والرابط"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSocialLink(soc.id)}
+                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                        title="حذف"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {/* Quick Add Bar */}
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
                 <select
                   value={newSocialPlatform}
@@ -1663,12 +1865,15 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
                   <option value="telegram">تيليجرام</option>
                   <option value="facebook">فيسبوك</option>
                   <option value="youtube">يوتيوب</option>
+                  <option value="linkedin">لينكد إن</option>
+                  <option value="pinterest">بينترست</option>
+                  <option value="custom">رابط مخصص</option>
                 </select>
                 <input
                   type="text"
                   value={newSocialTitle}
                   onChange={(e) => setNewSocialTitle(e.target.value)}
-                  placeholder="عنوان الحساب (اختياري)"
+                  placeholder="عنوان الحساب (مثال: إنستغرام ميني بازار)"
                   className="p-2 text-xs rounded-xl border border-[#E5D8C9]"
                 />
                 <input
@@ -1682,11 +1887,883 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
                 <button
                   type="button"
                   onClick={handleAddSocialLink}
-                  className="px-3 py-2 bg-[#6F584A] text-white rounded-xl text-xs font-bold"
+                  className="px-3 py-2 bg-[#6F584A] text-white rounded-xl text-xs font-bold hover:bg-[#5A4538] transition-colors cursor-pointer"
                 >
-                  إضافة حساب
+                  إضافة حساب سريع
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 7. FOOTER CONTACT & DETAILS (بيانات التواصل ورقم الاتصال والعناوين في الفوتر) */}
+        {(selectedElement === 'all' || selectedElement === 'footer_content' || selectedElement === 'footer_contact') && (
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5D8C9] space-y-4">
+            <h5 className="font-bold text-xs text-[#2F2B28] pb-2 border-b border-[#E5D8C9] flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-[#C6A36A]" />
+                <span>بيانات التواصل ورقم الاتصال والعناوين في الفوتر</span>
+              </span>
+              <span className="text-[10px] text-[#8A7465] bg-[#FAF6F0] px-2 py-0.5 rounded-md border border-[#E5D8C9]">
+                تظهر مباشرة في قسم تواصلي معنا
+              </span>
+            </h5>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Phone Number */}
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>رقم الاتصال المباشر:</span>
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.phone_number || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({ phone_number: e.target.value });
+                    handleNotify();
+                  }}
+                  placeholder="+966112345678"
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none font-mono"
+                  dir="ltr"
+                />
+                <span className="text-[10px] text-[#8A7465] mt-0.5 block">
+                  رقم الهاتف المتاح لخدمة العملاء في بطاقة الفوتر
+                </span>
+              </div>
+
+              {/* Support Email */}
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>البريد الإلكتروني للدعم والمراسلات:</span>
+                </label>
+                <input
+                  type="email"
+                  value={storeSettings.support_email || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({ support_email: e.target.value });
+                    handleNotify();
+                  }}
+                  placeholder="concierge@mini-bazar.com"
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none font-mono"
+                  dir="ltr"
+                />
+                <span className="text-[10px] text-[#8A7465] mt-0.5 block">
+                  البريد الإلكتروني الرسمي المعروض في الفوتر
+                </span>
+              </div>
+
+              {/* WhatsApp Number */}
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
+                  <span>رقم واتساب خدمة العملاء:</span>
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.whatsapp_number || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({ whatsapp_number: e.target.value });
+                    handleNotify();
+                  }}
+                  placeholder="+966501234567"
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none font-mono"
+                  dir="ltr"
+                />
+                <span className="text-[10px] text-[#8A7465] mt-0.5 block">
+                  يرتبط مباشرة بزر المحادثة الفورية مع البوتيك
+                </span>
+              </div>
+
+              {/* Working Hours */}
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>ساعات وأوقات العمل:</span>
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.service_hours_ar || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({ service_hours_ar: e.target.value });
+                    handleNotify();
+                  }}
+                  placeholder="يومياً من 1:00 ظهراً حتى 11:00 مساءً"
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                />
+                <span className="text-[10px] text-[#8A7465] mt-0.5 block">
+                  مواعيد خدمة الرد والاستفسارات
+                </span>
+              </div>
+
+              {/* Boutique Address */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>عنوان البوتيك / المقر في الفوتر:</span>
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.boutique_address_ar || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({ boutique_address_ar: e.target.value });
+                    handleNotify();
+                  }}
+                  placeholder="الرياض — طريق الملك فهد، برج العليا، الدور 18"
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                />
+                <span className="text-[10px] text-[#8A7465] mt-0.5 block">
+                  العنوان الجغرافي المعروض في تذييل الموقع
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 8. ABOUT US MANAGER (إدارة قسم "من نحن" والنافذة التعريفية الموحدة) */}
+        {(selectedElement === 'all' || selectedElement === 'about_us' || selectedElement === 'footer_content') && (
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5D8C9] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5D8C9]">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#C6A36A]" />
+                <h5 className="font-bold text-xs text-[#2F2B28]">
+                  إدارة محتوى قسم "من نحن" والنافذة التعريفية للبوتيك
+                </h5>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openAboutUsModal()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4ECE2] hover:bg-[#E5D8C9] text-[#6F584A] rounded-xl text-xs font-bold border border-[#E7D4BC] transition-all cursor-pointer shadow-xs"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>معاينة نافذة "من نحن" الحية</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Visibility & Publishing Toggles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-[#FAF4EE] rounded-xl border border-[#E5D8C9]">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-[#2F2B28]">
+                <input
+                  type="checkbox"
+                  checked={storeSettings.about_us?.enabled !== false}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        enabled: e.target.checked,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-4 h-4 rounded text-[#C6A36A] focus:ring-[#C6A36A] border-gray-300 cursor-pointer"
+                />
+                <span>تفعيل وظهور رابط "من نحن" في الفوتر</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-[#2F2B28]">
+                <input
+                  type="checkbox"
+                  checked={storeSettings.about_us?.published !== false}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        published: e.target.checked,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-4 h-4 rounded text-[#C6A36A] focus:ring-[#C6A36A] border-gray-300 cursor-pointer"
+                />
+                <span>حالة نشر النافذة للزوار والعملاء</span>
+              </label>
+            </div>
+
+            {/* Titles & Headings */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1">
+                  اسم الرابط في الفوتر:
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.about_us?.footer_link_title_ar || 'من نحن'}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        footer_link_title_ar: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                  placeholder="من نحن"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1">
+                  عنوان النافذة المنبثقة:
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.about_us?.modal_title_ar || 'عن بوتيك ميني بازار'}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        modal_title_ar: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                  placeholder="عن بوتيك ميني بازار"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1">
+                  العنوان الفرعي الترويجي:
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.about_us?.subtitle_ar || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        subtitle_ar: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                  placeholder="حكاية شغف بالجمال والأناقة"
+                />
+              </div>
+            </div>
+
+            {/* Story Paragraphs */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#6F584A] flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>فقرات قصة المتجر والنبذة التعريفية:</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentParas = storeSettings.about_us?.paragraphs || [];
+                    const newPara: AboutUsParagraph = {
+                      id: `p-${Date.now()}`,
+                      heading_ar: 'فقرة جديدة',
+                      text_ar: 'اكتبي هنا محتوى الفقرة التعريفية للبوتيك...',
+                    };
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        paragraphs: [...currentParas, newPara],
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2F2B28] text-white text-[11px] font-bold rounded-lg hover:bg-[#4A3E37] transition-all cursor-pointer"
+                >
+                  <Plus className="w-3 h-3 text-[#C6A36A]" />
+                  <span>إضافة فقرة جديدة</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {(storeSettings.about_us?.paragraphs || []).map((para, pIdx) => (
+                  <div key={para.id || pIdx} className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E5D8C9] space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <input
+                        type="text"
+                        value={para.heading_ar}
+                        onChange={(e) => {
+                          const updated = (storeSettings.about_us?.paragraphs || []).map((p, i) =>
+                            i === pIdx ? { ...p, heading_ar: e.target.value } : p
+                          );
+                          updateStoreSettings({
+                            about_us: {
+                              ...(storeSettings.about_us || {}),
+                              paragraphs: updated,
+                            } as AboutUsConfig,
+                          });
+                          handleNotify();
+                        }}
+                        className="p-1.5 text-xs font-bold rounded-lg border border-[#E5D8C9] bg-white w-full sm:w-1/2"
+                        placeholder="عنوان الفقرة (مثال: قصة انطلاقتنا)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (storeSettings.about_us?.paragraphs || []).filter((_, i) => i !== pIdx);
+                          updateStoreSettings({
+                            about_us: {
+                              ...(storeSettings.about_us || {}),
+                              paragraphs: updated,
+                            } as AboutUsConfig,
+                          });
+                          handleNotify();
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 cursor-pointer"
+                        title="حذف هذه الفقرة"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={para.text_ar}
+                      onChange={(e) => {
+                        const updated = (storeSettings.about_us?.paragraphs || []).map((p, i) =>
+                          i === pIdx ? { ...p, text_ar: e.target.value } : p
+                        );
+                        updateStoreSettings({
+                          about_us: {
+                            ...(storeSettings.about_us || {}),
+                            paragraphs: updated,
+                          } as AboutUsConfig,
+                        });
+                        handleNotify();
+                      }}
+                      className="w-full p-2 text-xs rounded-lg border border-[#E5D8C9] bg-white leading-relaxed"
+                      placeholder="نص الفقرة بالتفصيل..."
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Vision & Mission */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>الرؤية (Vision):</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={storeSettings.about_us?.vision_ar || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        vision_ar: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                  placeholder="رؤية البوتيك المستقبلية..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>الرسالة (Mission):</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={storeSettings.about_us?.mission_ar || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        mission_ar: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9] focus:border-[#C6A36A] focus:outline-none"
+                  placeholder="رسالة البوتيك لخدمة العميلات..."
+                />
+              </div>
+            </div>
+
+            {/* Values */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#6F584A] flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>قيم وثوابت المتجر:</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentValues = storeSettings.about_us?.values || [];
+                    const newValue: AboutUsValue = {
+                      id: `val-${Date.now()}`,
+                      title_ar: 'قيمة جديدة',
+                      description_ar: 'وصف القيمة والتزام المتجر بها...',
+                    };
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        values: [...currentValues, newValue],
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2F2B28] text-white text-[11px] font-bold rounded-lg hover:bg-[#4A3E37] transition-all cursor-pointer"
+                >
+                  <Plus className="w-3 h-3 text-[#C6A36A]" />
+                  <span>إضافة قيمة جديدة</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {(storeSettings.about_us?.values || []).map((val, vIdx) => (
+                  <div key={val.id || vIdx} className="p-2.5 bg-[#FAF8F5] rounded-xl border border-[#E5D8C9] space-y-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <input
+                        type="text"
+                        value={val.title_ar}
+                        onChange={(e) => {
+                          const updated = (storeSettings.about_us?.values || []).map((v, i) =>
+                            i === vIdx ? { ...v, title_ar: e.target.value } : v
+                          );
+                          updateStoreSettings({
+                            about_us: {
+                              ...(storeSettings.about_us || {}),
+                              values: updated,
+                            } as AboutUsConfig,
+                          });
+                          handleNotify();
+                        }}
+                        className="p-1 text-xs font-bold rounded-lg border border-[#E5D8C9] bg-white w-full"
+                        placeholder="عنوان القيمة"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (storeSettings.about_us?.values || []).filter((_, i) => i !== vIdx);
+                          updateStoreSettings({
+                            about_us: {
+                              ...(storeSettings.about_us || {}),
+                              values: updated,
+                            } as AboutUsConfig,
+                          });
+                          handleNotify();
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 cursor-pointer"
+                        title="حذف هذه القيمة"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={val.description_ar}
+                      onChange={(e) => {
+                        const updated = (storeSettings.about_us?.values || []).map((v, i) =>
+                          i === vIdx ? { ...v, description_ar: e.target.value } : v
+                        );
+                        updateStoreSettings({
+                          about_us: {
+                            ...(storeSettings.about_us || {}),
+                            values: updated,
+                          } as AboutUsConfig,
+                        });
+                        handleNotify();
+                      }}
+                      className="w-full p-1.5 text-[11px] rounded-lg border border-[#E5D8C9] bg-white leading-normal"
+                      placeholder="شرح وتفاصيل القيمة..."
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Contact text and Last Updated */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-[#5F5751] mb-1">
+                  نص التواصل والدعم أسفل النافذة:
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.about_us?.contact_text_ar || ''}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        contact_text_ar: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2.5 text-xs rounded-xl border border-[#E5D8C9]"
+                  placeholder="لأي استفسارات خاصة، فريقنا يسعد بخدمتكم..."
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4">
+                <label className="flex items-center gap-2 text-xs font-bold text-[#5F5751] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={storeSettings.about_us?.show_last_updated !== false}
+                    onChange={(e) => {
+                      updateStoreSettings({
+                        about_us: {
+                          ...(storeSettings.about_us || {}),
+                          show_last_updated: e.target.checked,
+                        } as AboutUsConfig,
+                      });
+                      handleNotify();
+                    }}
+                    className="w-4 h-4 rounded text-[#C6A36A] focus:ring-[#C6A36A] border-gray-300 cursor-pointer"
+                  />
+                  <span>إظهار تاريخ آخر تحديث</span>
+                </label>
+
+                <input
+                  type="date"
+                  value={storeSettings.about_us?.last_updated || '2026-03-01'}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      about_us: {
+                        ...(storeSettings.about_us || {}),
+                        last_updated: e.target.value,
+                      } as AboutUsConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="p-1.5 text-xs rounded-lg border border-[#E5D8C9]"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 9. STORE POLICIES & LEGAL MANAGER (إدارة معلومات وسياسات المتجر والخصوصية الشاملة) */}
+        {(selectedElement === 'all' || selectedElement === 'store_policies' || selectedElement === 'footer_content') && (
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5D8C9] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5D8C9]">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#C6A36A]" />
+                <h5 className="font-bold text-xs text-[#2F2B28]">
+                  إدارة معلومات وسياسات المتجر والخصوصية (السياسات الـ 5 القانونية)
+                </h5>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openPoliciesModal()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4ECE2] hover:bg-[#E5D8C9] text-[#6F584A] rounded-xl text-xs font-bold border border-[#E7D4BC] transition-all cursor-pointer shadow-xs"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#C6A36A]" />
+                  <span>معاينة نافذة السياسات الحية</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Section Visibility & Display Mode */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-[#FAF4EE] rounded-xl border border-[#E5D8C9]">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-[#2F2B28]">
+                <input
+                  type="checkbox"
+                  checked={storeSettings.store_policies?.section_enabled !== false}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      store_policies: {
+                        ...(storeSettings.store_policies || {}),
+                        section_enabled: e.target.checked,
+                      } as StorePoliciesConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-4 h-4 rounded text-[#C6A36A] focus:ring-[#C6A36A] border-gray-300 cursor-pointer"
+                />
+                <span>تفعيل وظهور قسم معلومات المتجر في الفوتر</span>
+              </label>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#5F5751] mb-1">
+                  عنوان القسم في الفوتر:
+                </label>
+                <input
+                  type="text"
+                  value={storeSettings.store_policies?.section_title_ar || 'معلومات المتجر'}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      store_policies: {
+                        ...(storeSettings.store_policies || {}),
+                        section_title_ar: e.target.value,
+                      } as StorePoliciesConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2 text-xs rounded-lg border border-[#E5D8C9] bg-white font-bold"
+                  placeholder="معلومات المتجر"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#5F5751] mb-1">
+                  نمط العرض داخل النافذة:
+                </label>
+                <select
+                  value={storeSettings.store_policies?.display_mode || 'tabs'}
+                  onChange={(e) => {
+                    updateStoreSettings({
+                      store_policies: {
+                        ...(storeSettings.store_policies || {}),
+                        display_mode: e.target.value as 'tabs' | 'list',
+                      } as StorePoliciesConfig,
+                    });
+                    handleNotify();
+                  }}
+                  className="w-full p-2 text-xs rounded-lg border border-[#E5D8C9] bg-white font-bold"
+                >
+                  <option value="tabs">تبويبات أفقية ذكية (Tabs)</option>
+                  <option value="list">قائمة متتالية</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Policies List Header & Add Button */}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs font-bold text-[#6F584A]">
+                قائمة السياسات المنشورة (
+                {(storeSettings.store_policies?.policies || []).filter((p) => p.is_active !== false).length} نشطة):
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentList = storeSettings.store_policies?.policies || [];
+                  const newPol: StorePolicyItem = {
+                    id: `pol-${Date.now()}`,
+                    key: `policy-${Date.now()}`,
+                    title_ar: 'سياسة جديدة',
+                    footer_link_text_ar: 'سياسة جديدة',
+                    content_ar: 'اكتبي هنا بنود ونصوص هذه السياسة بالتفصيل...',
+                    is_active: true,
+                    is_published: true,
+                    sort_order: currentList.length + 1,
+                    show_last_updated: true,
+                    last_updated: '2026-03-01',
+                  };
+                  updateStoreSettings({
+                    store_policies: {
+                      ...(storeSettings.store_policies || {}),
+                      policies: [...currentList, newPol],
+                    } as StorePoliciesConfig,
+                  });
+                  handleNotify();
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#2F2B28] text-white text-xs font-bold rounded-xl hover:bg-[#4A3E37] transition-all cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#C6A36A]" />
+                <span>إضافة سياسة جديدة</span>
+              </button>
+            </div>
+
+            {/* Policies List */}
+            <div className="space-y-4">
+              {(storeSettings.store_policies?.policies || []).map((policy, idx) => (
+                <div
+                  key={policy.id || idx}
+                  className="p-4 bg-[#FCFAF7] rounded-xl border border-[#E5D8C9] space-y-3 shadow-xs"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E5D8C9]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="w-6 h-6 rounded-full bg-[#F4ECE2] text-[#6F584A] text-xs font-bold flex items-center justify-center border border-[#E7D4BC]">
+                        {idx + 1}
+                      </span>
+                      <span className="font-bold text-xs text-[#2F2B28]">{policy.title_ar}</span>
+                      <span className="text-[10px] text-[#8A7465] bg-white px-2 py-0.5 rounded border border-[#E5D8C9]">
+                        الرابط: {policy.footer_link_text_ar}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openPoliciesModal(policy.key || policy.id)}
+                        className="p-1.5 text-xs text-[#6F584A] bg-[#F4ECE2] hover:bg-[#E5D8C9] rounded-lg border border-[#E7D4BC] flex items-center gap-1 cursor-pointer"
+                        title="معاينة هذه السياسة مباشرة"
+                      >
+                        <Eye className="w-3 h-3 text-[#C6A36A]" />
+                        <span>معاينة</span>
+                      </button>
+
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-[#5F5751] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={policy.is_active !== false}
+                          onChange={(e) => {
+                            const updated = (storeSettings.store_policies?.policies || []).map((p, i) =>
+                              i === idx ? { ...p, is_active: e.target.checked } : p
+                            );
+                            updateStoreSettings({
+                              store_policies: {
+                                ...(storeSettings.store_policies || {}),
+                                policies: updated,
+                              } as StorePoliciesConfig,
+                            });
+                            handleNotify();
+                          }}
+                          className="w-3.5 h-3.5 rounded text-[#C6A36A] focus:ring-[#C6A36A] border-gray-300"
+                        />
+                        <span>تفعيل</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (idx === 0) return;
+                          const updated = [...(storeSettings.store_policies?.policies || [])];
+                          const temp = updated[idx - 1];
+                          updated[idx - 1] = updated[idx];
+                          updated[idx] = temp;
+                          updateStoreSettings({
+                            store_policies: {
+                              ...(storeSettings.store_policies || {}),
+                              policies: updated,
+                            } as StorePoliciesConfig,
+                          });
+                          handleNotify();
+                        }}
+                        disabled={idx === 0}
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 cursor-pointer"
+                        title="تحريك لأعلى"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentPolicies = storeSettings.store_policies?.policies || [];
+                          if (idx === currentPolicies.length - 1) return;
+                          const updated = [...currentPolicies];
+                          const temp = updated[idx + 1];
+                          updated[idx + 1] = updated[idx];
+                          updated[idx] = temp;
+                          updateStoreSettings({
+                            store_policies: {
+                              ...(storeSettings.store_policies || {}),
+                              policies: updated,
+                            } as StorePoliciesConfig,
+                          });
+                          handleNotify();
+                        }}
+                        disabled={idx === (storeSettings.store_policies?.policies || []).length - 1}
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 cursor-pointer"
+                        title="تحريك لأسفل"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      {(storeSettings.store_policies?.policies || []).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف ${policy.title_ar}؟`)) {
+                              const updated = (storeSettings.store_policies?.policies || []).filter(
+                                (_, i) => i !== idx
+                              );
+                              updateStoreSettings({
+                                store_policies: {
+                                  ...(storeSettings.store_policies || {}),
+                                  policies: updated,
+                                } as StorePoliciesConfig,
+                              });
+                              handleNotify();
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 cursor-pointer"
+                          title="حذف السياسة"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5F5751] mb-1">
+                        عنوان السياسة الرئيسي:
+                      </label>
+                      <input
+                        type="text"
+                        value={policy.title_ar}
+                        onChange={(e) => {
+                          const updated = (storeSettings.store_policies?.policies || []).map((p, i) =>
+                            i === idx ? { ...p, title_ar: e.target.value } : p
+                          );
+                          updateStoreSettings({
+                            store_policies: {
+                              ...(storeSettings.store_policies || {}),
+                              policies: updated,
+                            } as StorePoliciesConfig,
+                          });
+                          handleNotify();
+                        }}
+                        className="w-full p-2 text-xs rounded-lg border border-[#E5D8C9] bg-white font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#5F5751] mb-1">
+                        نص الرابط المعروض في الفوتر:
+                      </label>
+                      <input
+                        type="text"
+                        value={policy.footer_link_text_ar}
+                        onChange={(e) => {
+                          const updated = (storeSettings.store_policies?.policies || []).map((p, i) =>
+                            i === idx ? { ...p, footer_link_text_ar: e.target.value } : p
+                          );
+                          updateStoreSettings({
+                            store_policies: {
+                              ...(storeSettings.store_policies || {}),
+                              policies: updated,
+                            } as StorePoliciesConfig,
+                          });
+                          handleNotify();
+                        }}
+                        className="w-full p-2 text-xs rounded-lg border border-[#E5D8C9] bg-white font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Policy Content Multiline Editor */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#5F5751] mb-1">
+                      نص وبنود السياسة بالتفصيل (المحرر القانوني):
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={policy.content_ar}
+                      onChange={(e) => {
+                        const updated = (storeSettings.store_policies?.policies || []).map((p, i) =>
+                          i === idx ? { ...p, content_ar: e.target.value } : p
+                        );
+                        updateStoreSettings({
+                          store_policies: {
+                            ...(storeSettings.store_policies || {}),
+                            policies: updated,
+                          } as StorePoliciesConfig,
+                        });
+                        handleNotify();
+                      }}
+                      className="w-full p-2.5 text-xs rounded-lg border border-[#E5D8C9] bg-white leading-relaxed font-sans"
+                      placeholder="اكتبي بنود السياسة هنا..."
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -1780,6 +2857,109 @@ export const FooterSettingsManager: React.FC<FooterSettingsManagerProps> = ({ on
                   className="px-5 py-2 rounded-xl bg-[#2F2B28] text-white font-bold"
                 >
                   حفظ الرابط
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Social Link Add/Edit */}
+      {isSocialModalOpen && editingSocialLink && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#E5D8C9] space-y-4 text-right">
+            <h4 className="text-sm font-bold text-[#2F2B28] font-heading border-b pb-3 flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-[#C6A36A]" />
+              <span>تعديل قناة وحساب السوشل ميديا</span>
+            </h4>
+
+            <form onSubmit={handleSaveSocialModal} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-[#5F5751] mb-1">المنصة أو شبكة التواصل:</label>
+                <select
+                  value={editingSocialLink.platform}
+                  onChange={(e) =>
+                    setEditingSocialLink({
+                      ...editingSocialLink,
+                      platform: e.target.value as SocialPlatform,
+                    })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-[#E5D8C9] bg-white font-medium"
+                >
+                  <option value="instagram">إنستغرام (Instagram)</option>
+                  <option value="tiktok">تيك توك (TikTok)</option>
+                  <option value="snapchat">سناب شات (Snapchat)</option>
+                  <option value="twitter">إكس (Twitter / X)</option>
+                  <option value="whatsapp">واتساب (WhatsApp)</option>
+                  <option value="telegram">تيليجرام (Telegram)</option>
+                  <option value="facebook">فيسبوك (Facebook)</option>
+                  <option value="youtube">يوتيوب (YouTube)</option>
+                  <option value="linkedin">لينكد إن (LinkedIn)</option>
+                  <option value="pinterest">بينترست (Pinterest)</option>
+                  <option value="custom">رابط شبكة مخصصة (Custom)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#5F5751] mb-1">اسم / عنوان القناة المعروض:</label>
+                <input
+                  type="text"
+                  required
+                  value={editingSocialLink.title_ar}
+                  onChange={(e) =>
+                    setEditingSocialLink({ ...editingSocialLink, title_ar: e.target.value })
+                  }
+                  placeholder="مثال: إنستغرام ميني بازار، واتساب البوتيك..."
+                  className="w-full p-2.5 rounded-xl border border-[#E5D8C9]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#5F5751] mb-1">رابط الحساب أو رقم التواصل (URL):</label>
+                <input
+                  type="text"
+                  required
+                  value={editingSocialLink.url}
+                  onChange={(e) =>
+                    setEditingSocialLink({ ...editingSocialLink, url: e.target.value })
+                  }
+                  placeholder="https://instagram.com/minibazaar أو https://wa.me/..."
+                  className="w-full p-2.5 rounded-xl border border-[#E5D8C9] font-mono text-left"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="social-active-checkbox"
+                  checked={editingSocialLink.is_active !== false}
+                  onChange={(e) =>
+                    setEditingSocialLink({
+                      ...editingSocialLink,
+                      is_active: e.target.checked,
+                    })
+                  }
+                  className="rounded border-[#C6A36A] text-[#C6A36A] focus:ring-[#C6A36A] w-4 h-4 cursor-pointer"
+                />
+                <label htmlFor="social-active-checkbox" className="font-bold text-[#2F2B28] cursor-pointer">
+                  تفعيل وظهور هذه القناة في الفوتر
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsSocialModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#E5D8C9] text-[#7C736D] hover:bg-gray-50 cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-[#2F2B28] text-white font-bold hover:bg-[#433B36] cursor-pointer"
+                >
+                  حفظ وتطبيق
                 </button>
               </div>
             </form>

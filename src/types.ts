@@ -163,6 +163,9 @@ export interface CustomerAddress {
   building?: string;
   postal_code?: string;
   additional_details?: string;
+  latitude?: number;
+  longitude?: number;
+  map_url?: string;
 }
 
 export interface Order {
@@ -346,6 +349,61 @@ export interface StoreSettings {
   footer_badge_color?: string;
   footer_font_size?: 'xs' | 'sm' | 'base';
   footer_font_weight?: 'normal' | 'medium' | 'semibold';
+
+  // Store Info Section, "About Us" and Text Policies System
+  footer_store_info_title_ar?: string;
+  about_us?: AboutUsSettings;
+  store_policies?: StorePoliciesSettings;
+}
+
+export interface AboutUsParagraph {
+  id: string;
+  heading_ar?: string;
+  text_ar: string;
+}
+
+export interface AboutUsValueItem {
+  id: string;
+  title_ar: string;
+  description_ar?: string;
+}
+
+export interface AboutUsSettings {
+  enabled: boolean;
+  published: boolean;
+  footer_link_title_ar: string;
+  modal_title_ar: string;
+  subtitle_ar?: string;
+  paragraphs: AboutUsParagraph[];
+  vision_ar?: string;
+  mission_ar?: string;
+  values?: AboutUsValueItem[];
+  contact_text_ar?: string;
+  show_last_updated?: boolean;
+  last_updated?: string;
+  text_alignment?: 'right' | 'center';
+  font_size?: 'sm' | 'base' | 'lg';
+}
+
+export interface StorePolicyItem {
+  id: string;
+  key: string;
+  title_ar: string;
+  footer_link_text_ar: string;
+  content_ar: string;
+  is_active: boolean;
+  is_published: boolean;
+  sort_order: number;
+  show_last_updated?: boolean;
+  last_updated?: string;
+}
+
+export interface StorePoliciesSettings {
+  section_title_ar: string;
+  section_enabled: boolean;
+  default_policy_id?: string;
+  display_mode?: 'tabs' | 'sidebar';
+  policies: StorePolicyItem[];
 }
 
 export type SocialPlatform =

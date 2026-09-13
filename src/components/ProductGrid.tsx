@@ -1,7 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
-import { Sparkles, SlidersHorizontal, PackageSearch, Award, X, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  Sparkles,
+  SlidersHorizontal,
+  PackageSearch,
+  Award,
+  X,
+  AlertCircle,
+  RefreshCw,
+  Square,
+  Grid2X2,
+} from 'lucide-react';
 
 export const ProductGrid: React.FC = () => {
   const {
@@ -20,6 +30,46 @@ export const ProductGrid: React.FC = () => {
   } = useStore();
 
   const [filterType, setFilterType] = useState<'all' | 'best_seller' | 'new'>('all');
+
+  // Mobile View Switcher State ('double' by default on mobile, persistent in localStorage)
+  const [mobileViewMode, setMobileViewMode] = useState<'single' | 'double'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('mb_mobile_view_mode');
+        if (saved === 'single' || saved === 'double') {
+          return saved;
+        }
+        if (window.innerWidth < 340) {
+          return 'single';
+        }
+      } catch {
+        // ignore localStorage access errors
+      }
+    }
+    return 'double'; // Default on mobile is 2 products per row
+  });
+
+  const handleMobileViewChange = (mode: 'single' | 'double') => {
+    setMobileViewMode(mode);
+    try {
+      localStorage.setItem('mb_mobile_view_mode', mode);
+    } catch (e) {
+      console.error('Failed to save mobile view preference:', e);
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      try {
+        const saved = localStorage.getItem('mb_mobile_view_mode');
+        if (window.innerWidth < 340 && !saved) {
+          setMobileViewMode('single');
+        }
+      } catch {}
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const activeCategoryObj = categories.find((c) => c.id === selectedCategory);
   const activeBrandObj = brands.find((b) => b.id === selectedBrand);
@@ -184,40 +234,88 @@ export const ProductGrid: React.FC = () => {
           )}
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-              filterType === 'all'
-                ? 'bg-[#2F2B28] text-white shadow-2xs border border-[#4A3E37]'
-                : 'bg-[#F4ECE2] text-[#2F2B28] hover:bg-[#E7D4BC]'
-            }`}
+        {/* Filter Pills and Mobile View Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* Mobile View Mode Switcher (Visible on mobile screens < sm) */}
+          <div
+            id="mobile-view-mode-selector"
+            className="sm:hidden flex items-center justify-between gap-2 p-1.5 bg-[#F4ECE2]/90 rounded-[16px] border border-[#E7D4BC] self-stretch shadow-2xs"
           >
-            جميع المعروضات ({filteredProducts.length})
-          </button>
+            <span className="text-xs font-bold text-[#6F584A] px-2 flex items-center gap-1.5">
+              <span>طريقة العرض:</span>
+            </span>
+            <div className="flex items-center gap-1 bg-[#EBE0D2]/60 p-0.5 rounded-[12px]">
+              <button
+                type="button"
+                id="view-mode-single-btn"
+                onClick={() => handleMobileViewChange('single')}
+                aria-label="عرض منتج واحد في الصف"
+                aria-pressed={mobileViewMode === 'single'}
+                title="عرض منتج واحد"
+                className={`min-w-[40px] min-h-[40px] px-3 flex items-center justify-center gap-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer ${
+                  mobileViewMode === 'single'
+                    ? 'bg-[#2F2B28] text-[#F5E9D8] shadow-2xs border border-[#4A3E37]'
+                    : 'text-[#6F584A] hover:text-[#2F2B28] hover:bg-white/50'
+                }`}
+              >
+                <Square className="w-4 h-4 shrink-0" />
+                <span className="whitespace-nowrap">منتج واحد</span>
+              </button>
 
-          <button
-            onClick={() => setFilterType('best_seller')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-              filterType === 'best_seller'
-                ? 'bg-[#2F2B28] text-white shadow-2xs border border-[#4A3E37]'
-                : 'bg-[#F4ECE2] text-[#2F2B28] hover:bg-[#E7D4BC]'
-            }`}
-          >
-            الأكثر طلباً
-          </button>
+              <button
+                type="button"
+                id="view-mode-double-btn"
+                onClick={() => handleMobileViewChange('double')}
+                aria-label="عرض منتجان في الصف"
+                aria-pressed={mobileViewMode === 'double'}
+                title="عرض منتجان"
+                className={`min-w-[40px] min-h-[40px] px-3 flex items-center justify-center gap-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer ${
+                  mobileViewMode === 'double'
+                    ? 'bg-[#2F2B28] text-[#F5E9D8] shadow-2xs border border-[#4A3E37]'
+                    : 'text-[#6F584A] hover:text-[#2F2B28] hover:bg-white/50'
+                }`}
+              >
+                <Grid2X2 className="w-4 h-4 shrink-0" />
+                <span className="whitespace-nowrap">منتجان</span>
+              </button>
+            </div>
+          </div>
 
-          <button
-            onClick={() => setFilterType('new')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-              filterType === 'new'
-                ? 'bg-[#2F2B28] text-white shadow-2xs border border-[#4A3E37]'
-                : 'bg-[#F4ECE2] text-[#2F2B28] hover:bg-[#E7D4BC]'
-            }`}
-          >
-            وصل حديثاً
-          </button>
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                filterType === 'all'
+                  ? 'bg-[#2F2B28] text-white shadow-2xs border border-[#4A3E37]'
+                  : 'bg-[#F4ECE2] text-[#2F2B28] hover:bg-[#E7D4BC]'
+              }`}
+            >
+              جميع المعروضات ({filteredProducts.length})
+            </button>
+
+            <button
+              onClick={() => setFilterType('best_seller')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                filterType === 'best_seller'
+                  ? 'bg-[#2F2B28] text-white shadow-2xs border border-[#4A3E37]'
+                  : 'bg-[#F4ECE2] text-[#2F2B28] hover:bg-[#E7D4BC]'
+              }`}
+            >
+              الأكثر طلباً
+            </button>
+
+            <button
+              onClick={() => setFilterType('new')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                filterType === 'new'
+                  ? 'bg-[#2F2B28] text-white shadow-2xs border border-[#4A3E37]'
+                  : 'bg-[#F4ECE2] text-[#2F2B28] hover:bg-[#E7D4BC]'
+              }`}
+            >
+              وصل حديثاً
+            </button>
+          </div>
         </div>
       </div>
 
@@ -339,9 +437,19 @@ export const ProductGrid: React.FC = () => {
 
       {/* Grid of Cards */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div
+          className={`grid ${
+            mobileViewMode === 'single'
+              ? 'grid-cols-1 gap-4'
+              : 'grid-cols-2 gap-2.5 sm:gap-6'
+          } sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`}
+        >
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              mobileViewMode={mobileViewMode}
+            />
           ))}
         </div>
       ) : products.length === 0 ? (

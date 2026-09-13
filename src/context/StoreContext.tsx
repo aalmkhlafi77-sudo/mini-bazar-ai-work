@@ -143,7 +143,8 @@ interface StoreContextType {
     bankTransferReceipt?: string;
     bankTransferConfirmed?: boolean;
   }) => Promise<Order>;
-  updateOrderStatus: (orderId: string, newStatus: OrderStatus, note: string) => void;
+  updateOrderStatus: (orderId: string, newStatus: OrderStatus, note: string, adminNotes?: string) => void;
+  updateOrderAdminNotes: (orderId: string, adminNotes: string) => void;
   verifyBankTransferReceipt: (orderId: string, verified: boolean, notes?: string) => void;
   addManualOrder: (order: Partial<Order>) => void;
 
@@ -159,10 +160,18 @@ interface StoreContextType {
   restoreDefaultCustomization: () => void;
 
   // View state navigation
-  activeView: 'store' | 'product' | 'checkout' | 'order-success' | 'wishlist' | 'admin' | 'policy';
-  setActiveView: (view: 'store' | 'product' | 'checkout' | 'order-success' | 'wishlist' | 'admin' | 'policy') => void;
+  activeView: 'store' | 'product' | 'checkout' | 'order-success' | 'wishlist' | 'admin' | 'policy' | 'track-order';
+  setActiveView: (view: 'store' | 'product' | 'checkout' | 'order-success' | 'wishlist' | 'admin' | 'policy' | 'track-order') => void;
   activePolicy: string | null;
   openPolicy: (policyKey: string) => void;
+  isAboutUsModalOpen: boolean;
+  setIsAboutUsModalOpen: (isOpen: boolean) => void;
+  openAboutUsModal: () => void;
+  closeAboutUsModal: () => void;
+  isPoliciesModalOpen: boolean;
+  setIsPoliciesModalOpen: (isOpen: boolean) => void;
+  openPoliciesModal: (policyKey?: string) => void;
+  closePoliciesModal: () => void;
 
   // Product & Category Administration
   saveProduct: (product: Product) => void;
@@ -192,6 +201,94 @@ const isUserAdminAuthorized = (user: User, claims?: Record<string, any>): boolea
     return true;
   }
   return false;
+};
+
+export const mergeStoreSettingsWithDefaults = (incoming?: Partial<StoreSettings> | null): StoreSettings => {
+  if (!incoming) return initialStoreSettings;
+
+  // Safe merge of about_us
+  const incomingAboutUs = incoming.about_us;
+  const defaultAboutUs = initialStoreSettings.about_us;
+  const mergedAboutUs = {
+    ...defaultAboutUs,
+    ...(incomingAboutUs || {}),
+    enabled: incomingAboutUs?.enabled !== undefined ? incomingAboutUs.enabled : (defaultAboutUs?.enabled ?? true),
+    published: incomingAboutUs?.published !== undefined ? incomingAboutUs.published : (defaultAboutUs?.published ?? true),
+    footer_link_title_ar: incomingAboutUs?.footer_link_title_ar || defaultAboutUs?.footer_link_title_ar || 'من نحن',
+    modal_title_ar: incomingAboutUs?.modal_title_ar || defaultAboutUs?.modal_title_ar || 'عن بوتيك ميني بازار',
+    subtitle_ar: incomingAboutUs?.subtitle_ar ?? defaultAboutUs?.subtitle_ar ?? '',
+    paragraphs:
+      incomingAboutUs?.paragraphs && incomingAboutUs.paragraphs.length > 0
+        ? incomingAboutUs.paragraphs
+        : defaultAboutUs?.paragraphs || [],
+    vision_ar: incomingAboutUs?.vision_ar || defaultAboutUs?.vision_ar || '',
+    mission_ar: incomingAboutUs?.mission_ar || defaultAboutUs?.mission_ar || '',
+    values:
+      incomingAboutUs?.values && incomingAboutUs.values.length > 0
+        ? incomingAboutUs.values
+        : defaultAboutUs?.values || [],
+    contact_text_ar: incomingAboutUs?.contact_text_ar || defaultAboutUs?.contact_text_ar || '',
+    show_last_updated: incomingAboutUs?.show_last_updated !== undefined ? incomingAboutUs.show_last_updated : (defaultAboutUs?.show_last_updated ?? true),
+    last_updated: incomingAboutUs?.last_updated || defaultAboutUs?.last_updated || '2026-03-01',
+    text_alignment: incomingAboutUs?.text_alignment || defaultAboutUs?.text_alignment || 'right',
+    font_size: incomingAboutUs?.font_size || defaultAboutUs?.font_size || 'sm',
+  };
+
+  // Safe merge of store_policies
+  const incomingPoliciesConfig = incoming.store_policies;
+  const defaultPoliciesConfig = initialStoreSettings.store_policies;
+  const incomingPolicies = incomingPoliciesConfig?.policies || [];
+  const defaultPolicies = defaultPoliciesConfig?.policies || [];
+
+  let finalPolicies = incomingPolicies.length > 0 ? incomingPolicies : defaultPolicies;
+
+  // Ensure default legal policies are preserved if partially missing
+  if (finalPolicies.length > 0 && finalPolicies.length < 5) {
+    const existingKeys = new Set(finalPolicies.map((p) => p.key || p.id));
+    const missingDefaults = defaultPolicies.filter((dp) => !existingKeys.has(dp.key) && !existingKeys.has(dp.id));
+    finalPolicies = [...finalPolicies, ...missingDefaults];
+  }
+
+  const mergedStorePolicies = {
+    ...defaultPoliciesConfig,
+    ...(incomingPoliciesConfig || {}),
+    section_title_ar: incomingPoliciesConfig?.section_title_ar || defaultPoliciesConfig?.section_title_ar || 'معلومات المتجر',
+    section_enabled: incomingPoliciesConfig?.section_enabled !== undefined ? incomingPoliciesConfig.section_enabled : (defaultPoliciesConfig?.section_enabled ?? true),
+    display_mode: incomingPoliciesConfig?.display_mode || defaultPoliciesConfig?.display_mode || 'tabs',
+    default_policy_id: incomingPoliciesConfig?.default_policy_id || defaultPoliciesConfig?.default_policy_id || 'pol-privacy',
+    policies: finalPolicies,
+  };
+
+  return {
+    ...initialStoreSettings,
+    ...incoming,
+    brand_settings: {
+      ...initialStoreSettings.brand_settings,
+      ...(incoming.brand_settings || {}),
+    },
+    about_us: mergedAboutUs,
+    store_policies: mergedStorePolicies,
+    social_links:
+      incoming.social_links && incoming.social_links.length > 0
+        ? incoming.social_links
+        : initialStoreSettings.social_links,
+    navigation_items:
+      incoming.navigation_items && incoming.navigation_items.length > 0
+        ? incoming.navigation_items
+        : initialStoreSettings.navigation_items,
+    footer_columns:
+      incoming.footer_columns && incoming.footer_columns.length > 0
+        ? incoming.footer_columns
+        : initialStoreSettings.footer_columns,
+    footer_commitments:
+      incoming.footer_commitments && incoming.footer_commitments.length > 0
+        ? incoming.footer_commitments
+        : initialStoreSettings.footer_commitments,
+    footer_payment_methods:
+      incoming.footer_payment_methods && incoming.footer_payment_methods.length > 0
+        ? incoming.footer_payment_methods
+        : initialStoreSettings.footer_payment_methods,
+  };
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -255,17 +352,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!saved) return initialStoreSettings;
     try {
       const parsed = JSON.parse(saved);
-      return {
-        ...initialStoreSettings,
-        ...parsed,
-        brand_settings: {
-          ...initialStoreSettings.brand_settings,
-          ...(parsed.brand_settings || {}),
-        },
-        social_links: parsed.social_links || initialStoreSettings.social_links,
-        navigation_items: parsed.navigation_items || initialStoreSettings.navigation_items,
-        footer_columns: parsed.footer_columns || initialStoreSettings.footer_columns,
-      };
+      return mergeStoreSettingsWithDefaults(parsed);
     } catch {
       return initialStoreSettings;
     }
@@ -388,12 +475,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Navigation & View State
-  const [activeView, setActiveView] = useState<'store' | 'product' | 'checkout' | 'order-success' | 'wishlist' | 'admin' | 'policy'>('store');
+  const [activeView, setActiveView] = useState<'store' | 'product' | 'checkout' | 'order-success' | 'wishlist' | 'admin' | 'policy' | 'track-order'>('store');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activePolicy, setActivePolicy] = useState<string | null>(null);
+  const [isAboutUsModalOpen, setIsAboutUsModalOpen] = useState(false);
+  const [isPoliciesModalOpen, setIsPoliciesModalOpen] = useState(false);
   const [language, setLanguage] = useState<'ar' | 'en'>('ar');
 
   // Persistence to storage with robust safeStorage guards
@@ -508,26 +597,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
 
     // 4. Real-time Orders Sync
-    const unsubOrders = listenToOrders((cloudOrders) => {
-      if (Array.isArray(cloudOrders)) {
-        setOrders(cloudOrders);
-        safeStorage.setItem('mb_orders', JSON.stringify(cloudOrders));
+    const unsubOrders = listenToOrders(
+      (cloudOrders) => {
+        if (Array.isArray(cloudOrders)) {
+          setOrders(cloudOrders);
+          safeStorage.setItem('mb_orders', JSON.stringify(cloudOrders));
+        }
+      },
+      (err) => {
+        console.warn('Orders initial sync notice:', err?.message);
       }
-    });
+    );
 
     // 5. Real-time Store Settings & Customization Sync
-    const unsubSettings = listenToStoreSettings((cloudData) => {
-      if (cloudData.storeSettings) {
-        setStoreSettings(cloudData.storeSettings);
-        safeStorage.setItem('mb_store_settings', JSON.stringify(cloudData.storeSettings));
+    const unsubSettings = listenToStoreSettings(
+      (cloudData) => {
+        if (cloudData.storeSettings) {
+          const merged = mergeStoreSettingsWithDefaults(cloudData.storeSettings);
+          setStoreSettings(merged);
+          safeStorage.setItem('mb_store_settings', JSON.stringify(merged));
+        }
+        if (cloudData.themeSettings) {
+          setThemeSettings(cloudData.themeSettings);
+          safeStorage.setItem('mb_theme_settings', JSON.stringify(cloudData.themeSettings));
+        }
+        settingsSynced = true;
+        checkInitialSyncDone();
+      },
+      (err) => {
+        settingsSynced = true;
+        handleSyncError(err);
       }
-      if (cloudData.themeSettings) {
-        setThemeSettings(cloudData.themeSettings);
-        safeStorage.setItem('mb_theme_settings', JSON.stringify(cloudData.themeSettings));
-      }
-      settingsSynced = true;
-      checkInitialSyncDone();
-    });
+    );
 
     // 6. Real-time Hero Slides Sync (Single Source of Truth)
     const unsubHeroSlides = listenToHeroSlides(
@@ -838,7 +939,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newOrder;
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus, note: string) => {
+  const updateOrderStatus = (orderId: string, newStatus: OrderStatus, note: string, adminNotes?: string) => {
     let updatedOrder: Order | null = null;
     setOrders((prev) =>
       prev.map((ord) => {
@@ -855,6 +956,37 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           updatedOrder = {
             ...ord,
             status: newStatus,
+            admin_notes: adminNotes !== undefined ? adminNotes : (note || ord.admin_notes),
+            logs: [newLog, ...ord.logs],
+          };
+          return updatedOrder;
+        }
+        return ord;
+      })
+    );
+
+    if (updatedOrder) {
+      updateOrderInCloud(orderId, updatedOrder);
+    }
+  };
+
+  const updateOrderAdminNotes = (orderId: string, adminNotes: string) => {
+    let updatedOrder: Order | null = null;
+    setOrders((prev) =>
+      prev.map((ord) => {
+        if (ord.id === orderId) {
+          const newLog = {
+            id: `log-${Date.now()}`,
+            order_id: orderId,
+            from_status: ord.status,
+            to_status: ord.status,
+            note: `تحديث ملاحظات المشرف للعميل: "${adminNotes}"`,
+            changed_by: 'المدير المسؤول (لوحة التحكم)',
+            created_at: new Date().toISOString(),
+          };
+          updatedOrder = {
+            ...ord,
+            admin_notes: adminNotes,
             logs: [newLog, ...ord.logs],
           };
           return updatedOrder;
@@ -1088,10 +1220,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deleteBrandFromCloud(brandId);
   };
 
-  // Policy modal/view
+  // Policy and About Us modals (Overlay on single-page, no route change)
   const openPolicy = (policyKey: string) => {
     setActivePolicy(policyKey);
-    setActiveView('policy');
+    setIsPoliciesModalOpen(true);
+  };
+
+  const openAboutUsModal = () => {
+    setIsAboutUsModalOpen(true);
+  };
+
+  const closeAboutUsModal = () => {
+    setIsAboutUsModalOpen(false);
+  };
+
+  const openPoliciesModal = (policyKey?: string) => {
+    if (policyKey) {
+      setActivePolicy(policyKey);
+    }
+    setIsPoliciesModalOpen(true);
+  };
+
+  const closePoliciesModal = () => {
+    setIsPoliciesModalOpen(false);
   };
 
   // ================= ADMIN AUTHENTICATION & SECURITY (FIREBASE AUTH) =================
@@ -1362,6 +1513,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentOrder,
         createOrder,
         updateOrderStatus,
+        updateOrderAdminNotes,
         verifyBankTransferReceipt,
         addManualOrder,
 
@@ -1379,6 +1531,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setActiveView,
         activePolicy,
         openPolicy,
+        isAboutUsModalOpen,
+        setIsAboutUsModalOpen,
+        openAboutUsModal,
+        closeAboutUsModal,
+        isPoliciesModalOpen,
+        setIsPoliciesModalOpen,
+        openPoliciesModal,
+        closePoliciesModal,
 
         saveProduct,
         deleteProduct,

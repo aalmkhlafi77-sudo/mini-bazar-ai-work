@@ -16,6 +16,7 @@ import {
   Tag,
   Home,
   CheckCircle2,
+  Package,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { MiniBazaarLogo } from './MiniBazaarLogo';
@@ -44,6 +45,16 @@ export const Header: React.FC = () => {
     storeSettings.navigation_items && storeSettings.navigation_items.length > 0
       ? [...storeSettings.navigation_items]
           .filter((i) => i.is_active !== false)
+          .filter((i) => {
+            const t = (i.title_ar || '').toLowerCase();
+            return (
+              !t.includes('من نحن') &&
+              !t.includes('معلومات المتجر') &&
+              !t.includes('سياس') &&
+              !t.includes('الشروط والأحكام') &&
+              i.type !== ('policy' as any)
+            );
+          })
           .sort((a, b) => a.sort_order - b.sort_order)
       : [
           { id: 'nav-home', title_ar: 'الرئيسية', type: 'home' as const, is_active: true, sort_order: 1 },
@@ -341,29 +352,46 @@ export const Header: React.FC = () => {
               )}
             </button>
 
-            {/* Admin Switcher Button (Desktop & Mobile) */}
+            {/* Track Order Trigger */}
             <button
               onClick={() => {
-                setActiveView(activeView === 'admin' ? 'store' : 'admin');
+                setActiveView('track-order');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                activeView === 'admin'
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                activeView === 'track-order'
                   ? 'bg-[#C6A36A] text-white border-[#C6A36A] shadow-xs'
                   : 'bg-[#F4ECE2] text-[#2F2B28] border-[#D9C1A7] hover:bg-[#E7D4BC]'
               }`}
-              title="لوحة الإدارة والتخصيص"
+              title="تتبع واستعراض الطلب"
             >
-              <div className="relative">
-                <ShieldCheck className="w-4 h-4 text-[#C6A36A]" />
-                {isAdminAuthenticated && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-                )}
-              </div>
-              <span>
-                {activeView === 'admin' ? 'العودة للمتجر' : 'لوحة الإدارة'}
-              </span>
+              <Package className="w-4 h-4 text-[#C6A36A]" />
+              <span>تتبع الطلب</span>
             </button>
+
+            {/* Admin Switcher Button (Desktop) - Shown only to authenticated admin */}
+            {isAdminAuthenticated && (
+              <button
+                onClick={() => {
+                  setActiveView(activeView === 'admin' ? 'store' : 'admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                  activeView === 'admin'
+                    ? 'bg-[#C6A36A] text-white border-[#C6A36A] shadow-xs'
+                    : 'bg-[#F4ECE2] text-[#2F2B28] border-[#D9C1A7] hover:bg-[#E7D4BC]'
+                }`}
+                title="لوحة الإدارة والتخصيص"
+              >
+                <div className="relative">
+                  <ShieldCheck className="w-4 h-4 text-[#C6A36A]" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </div>
+                <span>
+                  {activeView === 'admin' ? 'العودة للمتجر' : 'لوحة الإدارة'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -493,15 +521,29 @@ export const Header: React.FC = () => {
 
                 <button
                   onClick={() => {
-                    setActiveView('admin');
+                    setActiveView('track-order');
                     setIsMobileMenuOpen(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center justify-center gap-2 w-full bg-[#2F2B28] hover:bg-[#231F1D] text-[#F5E9D8] py-2.5 px-3 rounded-xl text-xs font-bold border border-[#4A3E37] transition-colors"
+                  className="flex items-center justify-center gap-2 w-full bg-[#F4ECE2] hover:bg-[#E7D4BC] text-[#2F2B28] py-2.5 px-3 rounded-xl text-xs font-bold border border-[#D9C1A7] transition-colors"
                 >
-                  <ShieldCheck className="w-4 h-4 text-[#C6A36A]" />
-                  <span>لوحة إدارة وتحكم المتجر</span>
+                  <Package className="w-4 h-4 text-[#C6A36A]" />
+                  <span>تتبع الطلب وملاحظات المشرف</span>
                 </button>
+
+                {isAdminAuthenticated && (
+                  <button
+                    onClick={() => {
+                      setActiveView('admin');
+                      setIsMobileMenuOpen(false);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="flex items-center justify-center gap-2 w-full bg-[#2F2B28] hover:bg-[#231F1D] text-[#F5E9D8] py-2.5 px-3 rounded-xl text-xs font-bold border border-[#4A3E37] transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-[#C6A36A]" />
+                    <span>لوحة إدارة وتحكم المتجر</span>
+                  </button>
+                )}
               </div>
 
               {/* Social Channels */}

@@ -72,10 +72,11 @@ const ProductDetailModalDialog: React.FC<ProductDetailModalDialogProps> = ({
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [activePhotoUrl, setActivePhotoUrl] = useState<string>(() => {
+    const defaultVariant = safeVariants.find((v) => v.is_default);
     return (
-      safeVariants.find((v) => v.is_default)?.image_path ||
-      safeImages[0]?.path ||
-      ''
+      (defaultVariant?.image_path && defaultVariant.image_path.trim()) ||
+      (safeImages[0]?.path && safeImages[0].path.trim()) ||
+      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=400&q=80'
     );
   });
   const [quantity, setQuantity] = useState<number>(1);
@@ -95,9 +96,10 @@ const ProductDetailModalDialog: React.FC<ProductDetailModalDialogProps> = ({
 
   // Active displayed image respects either the selected gallery thumbnail or selected variant
   const currentDisplayImage =
-    activePhotoUrl ||
-    safeImages[selectedImageIndex]?.path ||
-    safeImages[0]?.path;
+    (activePhotoUrl && activePhotoUrl.trim()) ||
+    (safeImages[selectedImageIndex]?.path && safeImages[selectedImageIndex].path.trim()) ||
+    (safeImages[0]?.path && safeImages[0].path.trim()) ||
+    'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=400&q=80';
 
   const handleThumbnailClick = (imgPath: string, idx: number) => {
     setSelectedImageIndex(idx);

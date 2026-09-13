@@ -277,7 +277,7 @@ export const HeroSeamlessCarousel: React.FC = () => {
             className="absolute inset-0 w-full h-full overflow-hidden"
           >
             {/* Ambient Blurred Backdrop for widescreen full-bleed coverage - only if enabled */}
-            {showAmbientBlur && (slide.image_fit === 'contain' || slide.image_fit === 'full_width') && (
+            {showAmbientBlur && (slide.image_fit === 'contain' || slide.image_fit === 'full_width') && fullBgImage && (
               <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
                 <picture className="w-full h-full">
                   {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
@@ -291,19 +291,21 @@ export const HeroSeamlessCarousel: React.FC = () => {
             )}
 
             {/* Foreground Main Image with Precision Scaling, Lighting & Clarity */}
-            <picture className="relative w-full h-full block overflow-hidden">
-              {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
-              <img
-                src={fullBgImage}
-                alt=""
-                style={imageTransformStyle}
-                className={`w-full h-full ${
-                  slide.image_fit === 'contain'
-                    ? `object-contain ${imagePositionClass}`
-                    : `object-cover ${imagePositionClass}`
-                }`}
-              />
-            </picture>
+            {fullBgImage && (
+              <picture className="relative w-full h-full block overflow-hidden">
+                {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
+                <img
+                  src={fullBgImage}
+                  alt=""
+                  style={imageTransformStyle}
+                  className={`w-full h-full ${
+                    slide.image_fit === 'contain'
+                      ? `object-contain ${imagePositionClass}`
+                      : `object-cover ${imagePositionClass}`
+                  }`}
+                />
+              </picture>
+            )}
 
             {/* Smart Overlay for High Contrast and Pristine Readability */}
             {overlayPercent > 0 && (
@@ -390,31 +392,33 @@ export const HeroSeamlessCarousel: React.FC = () => {
                 <div className="flex flex-col w-full py-1 sm:py-2">
                   <div className={`relative w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[24/9] ${getBorderRadiusClass(bannerBorderRadius)} overflow-hidden ${getShadowClass(bannerShadowStyle)} ${getBorderStyleClass(bannerBorderStyle)} group bg-[#2F2B28] flex items-center justify-center transition-all duration-300`}>
                     {/* Ambient Glow behind contain/full_width - only if enabled */}
-                    {showAmbientBlur && (slide.image_fit === 'contain' || slide.image_fit === 'full_width') && (
+                    {showAmbientBlur && (slide.image_fit === 'contain' || slide.image_fit === 'full_width') && (slide.desktop_image || fullBgImage) && (
                       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
                         <picture className="w-full h-full">
                           {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
                           <img
-                            src={slide.desktop_image || fullBgImage || ''}
+                            src={slide.desktop_image || fullBgImage}
                             alt=""
                             className="w-full h-full object-cover filter blur-2xl scale-110 opacity-30"
                           />
                         </picture>
                       </div>
                     )}
-                    <picture className="w-full h-full flex items-center justify-center overflow-hidden">
-                      {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
-                      <img
-                        src={slide.desktop_image || fullBgImage || ''}
-                        alt={slide.title_ar}
-                        style={imageTransformStyle}
-                        className={`relative ${
-                          slide.image_fit === 'contain'
-                            ? 'max-w-full max-h-full w-auto h-auto object-contain object-center p-2 sm:p-4'
-                            : `w-full h-full object-cover ${imagePositionClass}`
-                        } select-none`}
-                      />
-                    </picture>
+                    {(slide.desktop_image || fullBgImage) && (
+                      <picture className="w-full h-full flex items-center justify-center overflow-hidden">
+                        {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
+                        <img
+                          src={slide.desktop_image || fullBgImage}
+                          alt={slide.title_ar}
+                          style={imageTransformStyle}
+                          className={`relative ${
+                            slide.image_fit === 'contain'
+                              ? 'max-w-full max-h-full w-auto h-auto object-contain object-center p-2 sm:p-4'
+                              : `w-full h-full object-cover ${imagePositionClass}`
+                          } select-none`}
+                        />
+                      </picture>
+                    )}
                     {/* Atmospheric Scrim & Gradient - controlled */}
                     {showScrim && (
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
@@ -637,20 +641,22 @@ export const HeroSeamlessCarousel: React.FC = () => {
                         ? 'bg-[#2F2B28]'
                         : 'bg-[#F4ECE2]/70 p-3 sm:p-5'
                     } flex items-center justify-center transition-all duration-300`}>
-                      <picture className="w-full h-full flex items-center justify-center overflow-hidden">
-                        {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
-                        <img
-                          src={slide.desktop_image}
-                          alt={slide.title_ar}
-                          style={imageTransformStyle}
-                          className={`${
-                            slide.image_fit === 'contain'
-                              ? 'max-w-full max-h-full w-auto h-auto object-contain object-center'
-                              : `w-full h-full object-cover ${imagePositionClass}`
-                          } select-none`}
-                          loading="eager"
-                        />
-                      </picture>
+                      {slide.desktop_image && (
+                        <picture className="w-full h-full flex items-center justify-center overflow-hidden">
+                          {slide.mobile_image && <source media="(max-width: 640px)" srcSet={slide.mobile_image} />}
+                          <img
+                            src={slide.desktop_image}
+                            alt={slide.title_ar}
+                            style={imageTransformStyle}
+                            className={`${
+                              slide.image_fit === 'contain'
+                                ? 'max-w-full max-h-full w-auto h-auto object-contain object-center'
+                                : `w-full h-full object-cover ${imagePositionClass}`
+                            } select-none`}
+                            loading="eager"
+                          />
+                        </picture>
+                      )}
                       {/* Subtle luxury gradient vignette for non-contained cards - only if scrim enabled */}
                       {showScrim && slide.image_fit !== 'contain' && (
                         <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />

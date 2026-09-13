@@ -245,7 +245,10 @@ export function listenToBrands(
 /**
  * Real-time Orders listener.
  */
-export function listenToOrders(callback: (orders: Order[]) => void) {
+export function listenToOrders(
+  callback: (orders: Order[]) => void,
+  onError?: (error: any) => void
+) {
   try {
     const ordersRef = collection(db, 'orders');
     return onSnapshot(
@@ -266,9 +269,11 @@ export function listenToOrders(callback: (orders: Order[]) => void) {
         if (error?.code !== 'resource-exhausted') {
           console.warn('Orders sync snapshot notice:', error?.message);
         }
+        if (onError) onError(error);
       }
     );
   } catch (e) {
+    if (onError) onError(e);
     return () => {};
   }
 }
@@ -280,7 +285,8 @@ export function listenToStoreSettings(
   callback: (data: {
     storeSettings?: StoreSettings;
     themeSettings?: ThemeSettings;
-  }) => void
+  }) => void,
+  onError?: (error: any) => void
 ) {
   try {
     const generalRef = doc(db, 'store_settings', 'general');
@@ -308,6 +314,7 @@ export function listenToStoreSettings(
         if (error?.code !== 'resource-exhausted') {
           console.warn('General settings sync notice:', error?.message);
         }
+        if (onError) onError(error);
         notify();
       }
     );
@@ -324,6 +331,7 @@ export function listenToStoreSettings(
         if (error?.code !== 'resource-exhausted') {
           console.warn('Theme settings sync notice:', error?.message);
         }
+        if (onError) onError(error);
         notify();
       }
     );
@@ -333,6 +341,7 @@ export function listenToStoreSettings(
       unsubTheme();
     };
   } catch (e) {
+    if (onError) onError(e);
     return () => {};
   }
 }

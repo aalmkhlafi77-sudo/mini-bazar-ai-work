@@ -142,13 +142,16 @@ export const CategoryBar: React.FC = () => {
   const renderCardContent = (cat: Category, isSelected: boolean) => {
     const count = getProductCount(cat.id);
     const showIndicator = carouselSettings.show_active_indicator !== false;
+    const catImage =
+      (cat.image_path && cat.image_path.trim()) ||
+      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=400&q=80';
 
     // 1. OVERLAY FULL-BLEED STYLE
     if (carouselSettings.card_style === 'overlay') {
       return (
         <div className="relative w-full h-full">
           <img
-            src={cat.image_path}
+            src={catImage}
             alt={cat.name_ar}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
             loading="lazy"
@@ -198,7 +201,7 @@ export const CategoryBar: React.FC = () => {
           >
             <div className="w-full h-full rounded-full overflow-hidden bg-white p-0.5">
               <img
-                src={cat.image_path}
+                src={catImage}
                 alt={cat.name_ar}
                 className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-700"
                 loading="lazy"
@@ -237,7 +240,7 @@ export const CategoryBar: React.FC = () => {
         <>
           <div className="relative w-full aspect-[5/4] rounded-[14px] overflow-hidden mb-2 bg-[#F4ECE2] shadow-2xs">
             <img
-              src={cat.image_path}
+              src={catImage}
               alt={cat.name_ar}
               className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
               loading="lazy"
@@ -275,7 +278,7 @@ export const CategoryBar: React.FC = () => {
         <>
           <div className="relative w-full aspect-1/1 rounded-[12px] overflow-hidden mb-2.5 bg-[#F4ECE2]">
             <img
-              src={cat.image_path}
+              src={catImage}
               alt={cat.name_ar}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
@@ -322,7 +325,7 @@ export const CategoryBar: React.FC = () => {
           }`}
         >
           <img
-            src={cat.image_path}
+            src={catImage}
             alt={cat.name_ar}
             className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
             loading="lazy"

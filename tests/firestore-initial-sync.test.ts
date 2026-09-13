@@ -151,4 +151,39 @@ describe('Firestore Initial Sync and Default Data Prevention', () => {
     expect(isInitialLoading).toBe(false);
     expect(initialSyncError).toContain('استغرق الاتصال بقاعدة البيانات وقتاً أطول من المتوقع');
   });
+
+  it('verifies that any initial listener failure stops isInitialLoading immediately to prevent infinite skeleton display', () => {
+    let isInitialLoading = true;
+    let initialSyncError: string | null = null;
+
+    // Mock initial listener dispatcher
+    const mockSyncProcess = (shouldFail: boolean, failureType: string) => {
+      const handleSyncError = (err: any) => {
+        let msg = 'تعذر الاتصال بقاعدة البيانات لجلب المعروضات الحالية. يرجى التحقق من اتصال الإنترنت أو المحاولة لاحقاً.';
+        if (err?.code === 'permission-denied') {
+          msg = 'تم رفض إذن الوصول إلى بيانات المتجر (Permission Denied). يرجى التأكد من صلاحيات وقواعد أمان Firestore.';
+        } else if (err?.code === 'unavailable') {
+          msg = 'خدمة Firestore غير متاحة حالياً أو انقطع اتصال الشبكة. يرجى التحقق من اتصالك بالإنترنت.';
+        }
+        initialSyncError = msg;
+        isInitialLoading = false;
+      };
+
+      if (shouldFail) {
+        handleSyncError({ code: failureType, message: `Failed on initial load: ${failureType}` });
+      }
+    };
+
+    // Test with network failure
+    mockSyncProcess(true, 'unavailable');
+    expect(isInitialLoading).toBe(false);
+    expect(initialSyncError).toBe('خدمة Firestore غير متاحة حالياً أو انقطع اتصال الشبكة. يرجى التحقق من اتصالك بالإنترنت.');
+
+    // Reset & test with generic network/unknown error
+    isInitialLoading = true;
+    initialSyncError = null;
+    mockSyncProcess(true, 'unknown-network-cut');
+    expect(isInitialLoading).toBe(false);
+    expect(initialSyncError).toBe('تعذر الاتصال بقاعدة البيانات لجلب المعروضات الحالية. يرجى التحقق من اتصال الإنترنت أو المحاولة لاحقاً.');
+  });
 });

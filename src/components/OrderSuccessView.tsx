@@ -446,7 +446,15 @@ export const OrderSuccessView: React.FC = () => {
             <span>متابعة التسوق بالمتجر</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setActiveView('track-order')}
+              className="flex items-center gap-2 px-5 py-3 rounded-[14px] bg-[#2F2B28] hover:bg-[#231F1D] text-[#F5E9D8] text-xs font-semibold shadow-xs transition-transform active:scale-95"
+            >
+              <Package className="w-4 h-4 text-[#C6A36A]" />
+              <span>متابعة حالة الطلب وملاحظات المشرف</span>
+            </button>
+
             <button
               onClick={handlePrintReceipt}
               className="flex items-center gap-2 px-5 py-3 rounded-[14px] border border-[#D9C1A7] text-[#2F2B28] hover:bg-[#FBF8F3] text-xs font-semibold"
